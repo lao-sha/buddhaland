@@ -162,3 +162,31 @@ impl pallet_template::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_template::weights::SubstrateWeight<Runtime>;
 }
+
+// 在文件末尾添加karma pallet的配置
+impl pallet_karma::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = pallet_karma::weights::SubstrateWeight<Runtime>;
+    
+    // 配置常量参数
+    type BaseCheckinReward = ConstU128<1000>; // 每日签到基础奖励
+    type MaxConsecutiveMultiplier = ConstU8<7>; // 最大连续签到奖励倍数
+    type MinBlocksBetweenCheckins = ConstU32<14400>; // 两次签到最小区块间隔（约24小时）
+    
+    // 功德等级阈值配置
+    type MeritLevelThresholds = MeritLevelThresholds;
+    
+    // 使用默认验证器（开发阶段）
+    type Verifier = pallet_karma::AlwaysTrueVerifier;
+}
+
+// 定义功德等级阈值
+parameter_types! {
+    pub MeritLevelThresholds: &'static [u128] = &[
+        0,      // 等级0: 0-999
+        1000,   // 等级1: 1000-4999
+        5000,   // 等级2: 5000-19999
+        20000,  // 等级3: 20000-99999
+        100000, // 等级4: 100000+
+    ];
+}

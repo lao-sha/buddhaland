@@ -46,6 +46,7 @@ sp-session.workspace = true
 sp-storage.workspace = true
 sp-transaction-pool.workspace = true
 sp-version = { features = ["serde"], workspace = true }
+pallet-karma = { path = "../pallets/karma", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { optional = true, workspace = true, default-features = true }
@@ -87,6 +88,7 @@ std = [
 	"sp-transaction-pool/std",
 	"sp-version/std",
 	"substrate-wasm-builder",
+	"pallet-karma/std",
 ]
 
 runtime-benchmarks = [
@@ -101,6 +103,7 @@ runtime-benchmarks = [
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-transaction-payment/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
+	"pallet-karma/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -116,6 +119,7 @@ try-runtime = [
 	"pallet-timestamp/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 	"sp-runtime/try-runtime",
+	"pallet-karma/try-runtime",
 ]
 
 # Enable the metadata hash generation.
