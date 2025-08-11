@@ -166,7 +166,9 @@ impl pallet_template::Config for Runtime {
 // 在文件末尾添加karma pallet的配置
 impl pallet_karma::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type WeightInfo = pallet_karma::weights::SubstrateWeight<Runtime>;
+    /// 权重信息实现：当前使用默认实现 ()
+    /// 如需使用基准测试权重，请在 pallets/karma/src/weights.rs 中提供 SubstrateWeight 并切换配置
+    type WeightInfo = ();
     
     // 配置常量参数
     type BaseCheckinReward = ConstU128<1000>; // 每日签到基础奖励

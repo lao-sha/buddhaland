@@ -1,1 +1,0 @@
-禁止在项目创建Ubuntu\home\dong\buddhaland文件夹
