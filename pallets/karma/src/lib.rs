@@ -9,7 +9,7 @@
 pub use pallet::*;
 
 pub mod weights;
-use weights::WeightInfo;
+pub use weights::*;
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
@@ -17,11 +17,12 @@ use scale_info::TypeInfo;
 use frame_support::{
     dispatch::{DispatchResult, DispatchResultWithPostInfo},
     pallet_prelude::*,
-    traits::Get,
+    traits::{Get, BuildGenesisConfig},
+    BlockNumberFor,
 };
 use frame_system::pallet_prelude::*;
 use sp_runtime::traits::{Saturating, Zero};
-use sp_std::vec::Vec;
+use sp_std::{convert::TryFrom, vec::Vec};
 
 /// 任务标识类型
 pub type TaskId = u64;
@@ -49,14 +50,15 @@ pub enum RewardReason {
     ManualAdjust,
 }
 
-/// 功德消费记录
+/// 功德消费记录（使用 BoundedVec 限制描述长度，满足 MaxEncodedLen 约束）
+#[scale_info(skip_type_params(S))]
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq, TypeInfo, MaxEncodedLen)]
-pub struct MeritRecord<AccountId, BlockNumber> {
+pub struct MeritRecord<AccountId, BlockNumber, S: Get<u32>> {
     pub id: u64,
     pub who: AccountId,
     pub action: MeritAction,
     pub amount: KarmaBalance,
-    pub description: Vec<u8>,
+    pub description: BoundedVec<u8, S>,
     pub at_block: BlockNumber,
 }
 
@@ -100,9 +102,12 @@ pub trait KarmaProvider<AccountId> {
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use frame_support::pallet_prelude::*;
+    use frame_system::pallet_prelude::*;
+    use frame_support::traits::GenesisBuild;
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     /// Pallet 配置
@@ -125,6 +130,9 @@ pub mod pallet {
         type MeritLevelThresholds: Get<&'static [KarmaBalance]>;
         /// 任务/禅修证明验证器
         type Verifier: MeditationVerifier<Self::AccountId>;
+        /// 功德记录描述最大长度（字节）
+        #[pallet::constant]
+        type MaxDescriptionLen: Get<u32>;
     }
 
     /// 用户 Karma 余额（不可转移）
@@ -148,7 +156,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn last_checkin_block)]
     pub type DailyCheckins<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, T::AccountId, BlockNumberFor<T>, OptionQuery>;
 
     /// 每个账户的下一条功德记录 ID（自增）
     #[pallet::storage]
@@ -165,7 +173,7 @@ pub mod pallet {
         T::AccountId,
         Blake2_128Concat,
         u64,
-        MeritRecord<T::AccountId, T::BlockNumber>,
+        MeritRecord<T::AccountId, BlockNumberFor<T>, T::MaxDescriptionLen>,
         OptionQuery,
     >;
 
@@ -178,7 +186,7 @@ pub mod pallet {
         T::AccountId,
         Blake2_128Concat,
         TaskId,
-        TaskCompletion<T::BlockNumber>,
+        TaskCompletion<BlockNumberFor<T>>,
         OptionQuery,
     >;
 
@@ -194,6 +202,8 @@ pub mod pallet {
         Overflow,
         ZeroAmount,
         TooFrequent,
+        /// 描述长度超过上限
+        DescriptionTooLong,
     }
 
     /// 事件类型
@@ -202,6 +212,7 @@ pub mod pallet {
     pub enum Event<T: Config> {
         KarmaRewarded(T::AccountId, KarmaBalance, RewardReason),
         KarmaConsumed(T::AccountId, KarmaBalance, MeritAction),
+        /// 为保持事件数据灵活性，事件中仍使用 Vec<u8> 存放描述摘要
         MeritActionPerformed(T::AccountId, MeritAction, Vec<u8>),
         MeritValueUpdated(T::AccountId, KarmaBalance, u8),
         DailyCheckin(T::AccountId, KarmaBalance, u32),
@@ -228,7 +239,7 @@ pub mod pallet {
 
     /// 创世构建：初始化 Karma、总功德与等级
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
         fn build(&self) {
             for (account, karma) in &self.initial_karma {
                 KarmaBalances::<T>::insert(account, karma);
@@ -246,6 +257,7 @@ pub mod pallet {
         /// 每日签到：按基础奖励与连续签到倍数发放 Karma
         /// - 防刷：与最近签到区块比较，需超过 MinBlocksBetweenCheckins
         /// - 事件：DailyCheckin、KarmaRewarded
+        #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::daily_checkin())]
         pub fn daily_checkin(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
@@ -280,6 +292,7 @@ pub mod pallet {
         /// - 防重复：同一 TaskId 仅能完成一次
         /// - 验证：通过 Config::Verifier 执行证明校验
         /// - 事件：TaskCompleted、KarmaRewarded
+        #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::complete_meditation_task())]
         pub fn complete_meditation_task(
             origin: OriginFor<T>,
@@ -306,6 +319,7 @@ pub mod pallet {
         /// 执行功德行为：从 Karma 余额中扣减并累计至总功德值、更新等级、记录历史
         /// - 输入：行为类型、消费数量、描述
         /// - 事件：KarmaConsumed、MeritActionPerformed、MeritValueUpdated、LevelUp（如升级）
+        #[pallet::call_index(2)]
         #[pallet::weight(T::WeightInfo::perform_merit_action())]
         pub fn perform_merit_action(
             origin: OriginFor<T>,
@@ -315,6 +329,9 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             ensure!(karma_amount > 0, Error::<T>::ZeroAmount);
+
+            let bounded_desc = BoundedVec::<u8, T::MaxDescriptionLen>::try_from(description.clone())
+                .map_err(|_| Error::<T>::DescriptionTooLong)?;
 
             KarmaBalances::<T>::try_mutate(&who, |b| -> Result<(), Error<T>> {
                 ensure!(*b >= karma_amount, Error::<T>::InsufficientKarma);
@@ -336,12 +353,12 @@ pub mod pallet {
                 curr
             });
             let now_block = <frame_system::Pallet<T>>::block_number();
-            let rec = MeritRecord::<T::AccountId, T::BlockNumber> {
+            let rec = MeritRecord::<T::AccountId, T::BlockNumber, T::MaxDescriptionLen> {
                 id: rec_id,
                 who: who.clone(),
                 action,
                 amount: karma_amount,
-                description: description.clone(),
+                description: bounded_desc.clone(),
                 at_block: now_block,
             };
             MeritConsumptionHistory::<T>::insert(&who, rec_id, rec);
@@ -377,20 +394,16 @@ pub mod pallet {
         pub fn get_recent_merit_records(
             who: &T::AccountId,
             count: u32,
-        ) -> Vec<MeritRecord<T::AccountId, T::BlockNumber>> {
-            let mut res = Vec::new();
-            let mut left = count;
-            let mut id = NextMeritRecordId::<T>::get(who);
-            while left > 0 && id > 0 {
-                id -= 1;
-                if let Some(r) = MeritConsumptionHistory::<T>::get(who, id) {
-                    res.push(r);
-                    left -= 1;
-                } else {
-                    break;
+        ) -> Vec<MeritRecord<T::AccountId, BlockNumberFor<T>, T::MaxDescriptionLen>> {
+            let last_id = NextMeritRecordId::<T>::get(who);
+            let start_id = last_id.saturating_sub(count as u64);
+            let mut records = Vec::new();
+            for id in start_id..last_id {
+                if let Some(record) = MeritConsumptionHistory::<T>::get(who, id) {
+                    records.push(record);
                 }
             }
-            res
+            records
         }
 
         /// 系统内部：奖励 Karma（无签名调用）
@@ -412,6 +425,9 @@ pub mod pallet {
         ) -> DispatchResult {
             ensure!(amount > 0, Error::<T>::ZeroAmount);
 
+            let bounded_desc = BoundedVec::<u8, T::MaxDescriptionLen>::try_from(description.clone())
+                .map_err(|_| Error::<T>::DescriptionTooLong)?;
+
             KarmaBalances::<T>::try_mutate(who, |b| -> Result<(), Error<T>> {
                 ensure!(*b >= amount, Error::<T>::InsufficientKarma);
                 *b = b.saturating_sub(amount);
@@ -432,14 +448,14 @@ pub mod pallet {
                 curr
             });
             let now_block = <frame_system::Pallet<T>>::block_number();
-            let rec = MeritRecord::<T::AccountId, T::BlockNumber> {
+            let rec = MeritRecord::<T::AccountId, BlockNumberFor<T>> {
                 id: rec_id,
                 who: who.clone(),
                 action,
                 amount,
-                description: description.clone(),
-                at_block: now_block,
-            };
+                description: description_bounded,
+                at_block: frame_system::Pallet::<T>::block_number(),
+             };
             MeritConsumptionHistory::<T>::insert(who, rec_id, rec);
 
             Self::deposit_event(Event::KarmaConsumed(who.clone(), amount, action));

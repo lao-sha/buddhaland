@@ -25,7 +25,7 @@
 
 // Substrate and Polkadot dependencies
 use frame_support::{
-	derive_impl, parameter_types,
+	derive_impl, parameter_types, PalletId,
 	traits::{ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, VariantCountOf},
 	weights::{
 		constants::{RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND},
@@ -180,6 +180,9 @@ impl pallet_karma::Config for Runtime {
     
     // 使用默认验证器（开发阶段）
     type Verifier = pallet_karma::AlwaysTrueVerifier;
+    
+    // 功德记录描述最大字节数
+    type MaxDescriptionLen = ConstU32<256>;
 }
 
 // 定义功德等级阈值
@@ -191,4 +194,94 @@ parameter_types! {
         20000,  // 等级3: 20000-99999
         100000, // 等级4: 100000+
     ];
+}
+
+// Exchange Pallet 配置常量（账户与比例）
+parameter_types! {
+    // 示例账户：在开发网络中可用Alice/Bob等测试账户替代，这里保持占位，由链上配置赋值更合理
+    pub const BlackholeAccountId: AccountId = AccountId::new([0u8; 32]);
+    pub const TreasuryAccountId: AccountId = AccountId::new([1u8; 32]);
+    pub const PaymasterAccountId: AccountId = AccountId::new([2u8; 32]);
+    pub const ExchangeRateConst: u128 = 1000;     // 1 BUD => 1000 Karma
+    pub const BurnBpsConst: u32 = 2000;           // 20%
+    pub const TreasuryBpsConst: u32 = 7000;       // 70%
+    pub const PaymasterBpsConst: u32 = 1000;      // 10%
+    pub const BpsDenominatorConst: u32 = 10000;   // 基点基数
+}
+
+impl pallet_exchange::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
+    type PaymasterAccount = PaymasterAccountId;
+    type BlackholeAccount = BlackholeAccountId;
+    type TreasuryAccount = TreasuryAccountId;
+    type ExchangeRate = ExchangeRateConst;
+    type BurnBps = BurnBpsConst;
+    type TreasuryBps = TreasuryBpsConst;
+    type PaymasterBps = PaymasterBpsConst;
+    type BpsDenominator = BpsDenominatorConst;
+}
+
+// Paymaster Pallet 配置常量
+parameter_types! {
+    pub const PaymasterPalletId: PalletId = PalletId(*b"paymastr");
+    pub const MaxBatchSize: u32 = 50;
+    pub const MinimumDepositConst: Balance = 1000 * UNIT;
+    pub const ServiceFeeRateConst: u32 = 100; // 1% 服务费，基点制
+}
+
+impl pallet_paymaster::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type RuntimeCall = RuntimeCall;
+    type Currency = Balances;
+    type PalletId = PaymasterPalletId;
+    type MaxBatchSize = MaxBatchSize;
+    type MinimumDeposit = MinimumDepositConst;
+    type ServiceFeeRate = ServiceFeeRateConst;
+    type WeightInfo = ();
+}
+
+// 为 Prayer Pallet 提供运行时配置
+parameter_types! {
+    pub const DefaultPrayerCost: u128 = 100; // 祈福默认消耗 100 Karma
+}
+
+impl pallet_prayer::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type DefaultPrayerCost = DefaultPrayerCost;
+}
+
+// 为 Ritual Pallet 提供运行时配置
+parameter_types! {
+    pub const DefaultIncenseCost: u128 = 10;    // 上香默认消耗
+    pub const DefaultLampCost: u128 = 20;       // 点灯默认消耗
+    pub const DefaultFlowerCost: u128 = 30;     // 供花默认消耗
+    pub const DefaultDonationCost: u128 = 50;   // 布施默认消耗
+}
+
+impl pallet_ritual::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type DefaultIncenseCost = DefaultIncenseCost;
+    type DefaultLampCost = DefaultLampCost;
+    type DefaultFlowerCost = DefaultFlowerCost;
+    type DefaultDonationCost = DefaultDonationCost;
+}
+
+// Meditation Pallet 配置常量
+parameter_types! {
+    pub const EnableKarmaRewardConst: bool = true;                 // 开启奖励
+    pub const BaseRewardPerMinuteConst: u128 = 3;                  // 每分钟基础奖励 3 Karma
+    pub const MinDurationMinutesConst: u32 = 5;                    // 至少 5 分钟
+    pub const MinQualityScoreConst: u8 = 60;                       // 数据质量阈值 60
+}
+
+impl pallet_meditation::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = (); // 暂用默认占位权重
+    type Moment = u64;    // 与 timestamp::Config::Moment 对齐
+    type EnableKarmaReward = EnableKarmaRewardConst;
+    type BaseRewardPerMinute = BaseRewardPerMinuteConst;
+    type MinDurationMinutes = MinDurationMinutesConst;
+    type MinQualityScore = MinQualityScoreConst;
+    type Karma = pallet_karma::Pallet<Runtime>;
 }

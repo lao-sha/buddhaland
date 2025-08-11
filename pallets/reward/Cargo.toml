@@ -1,0 +1,57 @@
+[package]
+name = "pallet-reward"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+authors = ["BuddhaLand"]
+description = "Reward pallet: 基于禅修冥想数据的动态 Karma 福缘值奖励系统"
+
+[lib]
+name = "pallet_reward"
+path = "src/lib.rs"
+crate-type = ["rlib"]
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "scale-info/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "frame-support/std",
+    "frame-system/std",
+    "pallet-karma/std",
+    "pallet-meditation/std",
+]
+runtime-benchmarks = [
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "pallet-karma/runtime-benchmarks",
+    "pallet-meditation/runtime-benchmarks",
+]
+try-runtime = [
+    "frame-support/try-runtime",
+    "frame-system/try-runtime",
+    "pallet-karma/try-runtime",
+    "pallet-meditation/try-runtime",
+]
+
+[dependencies]
+codec = { workspace = true, default-features = false, features = ["derive"] }
+scale-info = { workspace = true, default-features = false, features = ["derive"] }
+sp-std = { workspace = true, default-features = false }
+sp-runtime = { workspace = true, default-features = false }
+frame-support = { workspace = true, default-features = false }
+frame-system = { workspace = true, default-features = false }
+frame-benchmarking = { workspace = true, optional = true, default-features = false }
+
+# 依赖 karma pallet 用于福缘值发放
+pallet-karma = { path = "../karma", default-features = false }
+# 依赖 meditation pallet 用于监听冥想事件和访问数据
+pallet-meditation = { path = "../meditation", default-features = false }
+
+[dev-dependencies]
+sp-core = { workspace = true }
+sp-io = { workspace = true }

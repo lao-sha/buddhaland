@@ -1,0 +1,44 @@
+[package]
+name = "pallet-meditation"
+version = "0.1.0"
+edition = "2021"
+authors = ["BuddhaLand"]
+license = "Unlicense"
+description = "Meditation pallet: 验证与记录禅修会话，并可选触发 Karma 奖励"
+repository = "https://example.com/buddhaland"
+
+[lib]
+name = "pallet_meditation"
+path = "src/lib.rs"
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "scale-info/std",
+    "sp-std/std",
+    "sp-runtime/std",
+    "frame-support/std",
+    "frame-system/std",
+    "pallet-timestamp/std",
+    "pallet-karma/std",
+]
+# Optional features for advanced usage
+runtime-benchmarks = [
+    "frame-benchmarking",
+    "frame-support/runtime-benchmarks",
+]
+try-runtime = ["frame-support/try-runtime"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
+scale-info = { version = "2", default-features = false, features = ["derive"] }
+sp-std = { version = "13", default-features = false }
+sp-runtime = { version = "33", default-features = false }
+
+frame-support = { version = "33", default-features = false }
+frame-system = { version = "33", default-features = false }
+frame-benchmarking = { version = "33", default-features = false, optional = true }
+
+pallet-timestamp = { version = "33", default-features = false }
+pallet-karma = { package = "pallet-karma", path = "../karma", default-features = false }

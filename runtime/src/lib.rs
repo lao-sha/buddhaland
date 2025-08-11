@@ -229,4 +229,24 @@ mod runtime {
 	// Include the karma pallet in the runtime.
 	#[runtime::pallet_index(8)]
 	pub type Karma = pallet_karma;
+
+	// Include the prayer pallet in the runtime.
+	#[runtime::pallet_index(9)]
+	pub type Prayer = pallet_prayer;
+
+	// Include the ritual pallet in the runtime.
+	#[runtime::pallet_index(10)]
+	pub type Ritual = pallet_ritual;
+
+	// Include the exchange pallet in the runtime.
+	#[runtime::pallet_index(11)]
+	pub type Exchange = pallet_exchange;
+
+	// Include the meditation pallet in the runtime.
+	#[runtime::pallet_index(12)]
+	pub type Meditation = pallet_meditation;
+
+	// Include the paymaster pallet in the runtime.
+	#[runtime::pallet_index(13)]
+	pub type Paymaster = pallet_paymaster;
 }
