@@ -1,147 +1,107 @@
 # Exchange Pallet
 
-BUD代币兑换Karma（福缘值）的pallet。实现单向兑换机制，并将兑换的BUD按比例分配到四个目标。
-
 ## 功能概述
 
 Exchange Pallet专门处理BUD代币到Karma的单向兑换，支持将收到的BUD按照预设比例分配到不同的账户：
-- 一部分销毁（黑洞）
-- 一部分进入国库
-- 一部分进入paymaster用于支付用户gas费
-- 一部分进入share-mining奖金池用于支付share-mining奖励
+- 一部分进入黑洞销毁（通缩机制）
+- 一部分进入国库（治理资金）
+- 一部分进入Paymaster系统托管池用于支付用户Gas费
+- 一部分进入Share-Mining奖金池用于支付share-mining奖励
 
+## 核心特性
 
-
-## 核心功能特性
-
-### 1. 单向兑换
-- **BUD → Karma**: 支持用户使用BUD代币兑换Karma福缘值
-- **不可逆**: Karma不能兑换回BUD，确保福缘值的精神价值
-- **可配置比例**: 兑换比例通过runtime配置项设定
-
-### 2. BUD分配机制
-兑换得到的BUD将按比例分配到四个目标：
-- **黑洞 (Burn)**: 永久销毁，减少代币流通量
-- **国库 (Treasury)**: 用于生态发展和治理
-- **Paymaster**: 用于代付用户交易费用
+### 分配机制
+- **黑洞销毁**: 不可恢复的BUD销毁，减少总供应量
+- **国库**: 用于治理提案和链上开支
+- **Paymaster系统托管池**: 免签名代付gas费资金池
 - **Share-Mining 奖金池**: 用于支付 share-mining 激励
 
-
-
-### 3. 配置参数
+### 配置参数
 - `ExchangeRate`: 兑换比例（1 BUD = X Karma）
-- `BurnBps`: 黑洞分配比例（基点制，10000=100%）
-- `TreasuryBps`: 国库分配比例
-- `PaymasterBps`: Paymaster分配比例
-- `ShareMiningBps`: Share-Mining 奖金池分配比例
-- 账户配置：`BlackholeAccount`, `TreasuryAccount`, `PaymasterAccount`, `ShareMiningAccount`
+- 分配比例（基点制）：
+  - `BurnBps`: 黑洞销毁比例
+  - `TreasuryBps`: 国库分配比例
+  - `PaymasterBps`: Paymaster系统托管池分配比例
+  - `ShareMiningBps`: Share-Mining 奖金池分配比例
+- 账户配置：`BlackholeAccount`, `TreasuryAccount`
 - `BpsDenominator`: 基点分母（通常10000），需满足 BurnBps + TreasuryBps + PaymasterBps + ShareMiningBps = BpsDenominator
 
-## 设计原则
+## 存储结构
 
-### 安全性
-- **原子性**: 兑换过程要么全部成功，要么全部失败
-- **比例验证**: 确保三个分配比例之和等于100%
-- **余额检查**: 兑换前检查用户BUD余额是否充足
-- **错误处理**: 详细的错误类型和回滚机制
-
-### 透明性
-- **事件记录**: 每次兑换都记录详细事件
-- **可追溯**: 所有分配去向都在链上可查
-- **公开配置**: 所有参数都是公开的常量
-
-### 可配置性
-- **灵活比例**: 支持runtime调整分配比例
-- **可更新账户**: 支持更换目标账户地址
-- **动态汇率**: 支持调整兑换比例
-
-## 存储设计
-
-本pallet为无状态设计，不需要额外存储，所有操作都是即时执行。
+无链上存储，所有状态通过配置参数和事件维护。
 
 ## 事件
 
 ```rust
-/// 成功兑换Karma [用户, bud_in, karma_out, burn, treasury, paymaster, share_mining]
-Exchanged(AccountId, u128, KarmaBalance, u128, u128, u128, u128)
-```
-
-## 错误类型
-
-```rust
-pub enum Error<T> {
-    /// 输入金额为0
-    ZeroAmount,
-    /// 分配比例之和不等于BpsDenominator
-    InvalidBps,
-    /// 代币转账失败
-    TransferFailed,
-    /// Karma发放失败
-    KarmaMintFailed,
+#[pallet::event]
+pub enum Event<T: Config> {
+    /// 成功兑换Karma [用户, bud_in, karma_out, burn, treasury, paymaster, share_mining]
+    Exchanged(T::AccountId, u128, KarmaBalance, u128, u128, u128, u128),
 }
 ```
 
-## 外部调用 (Extrinsics)
+### 事件说明
+
+#### Exchanged
+```rust
+Exchanged(AccountId, u128, KarmaBalance, u128, u128, u128, u128)
+```
+- 参数：`[用户账户, BUD输入数量, Karma输出数量, 黑洞销毁数量, 国库分配数量, Paymaster数量, Share-Mining数量]`
+- 触发时机：每次成功完成 BUD→Karma 兑换和分配后
+
+## 外部调用接口
 
 ### exchange(amount: u128)
-用户调用此函数用BUD兑换Karma。
 
-**参数**:
-- `amount`: 要兑换的BUD数量
+用户兑换接口，将指定数量的 BUD 兑换为 Karma，并按配置比例分配 BUD。
 
-**逻辑**:
-1. 验证输入金额 > 0
-2. 验证分配比例配置正确（校验四个BPS之和等于分母）
-3. 计算四个目标的分配金额（黑洞、国库、Paymaster、Share-Mining 奖金池）
-4. 依次转账到黑洞、国库、paymaster、share-mining
-5. 给用户发放对应数量的Karma
-6. 发出Exchanged事件
+**执行流程**：
+1. 校验输入参数（amount > 0）
+2. 校验分配比例总和等于基点分母
+3. 计算四个目标的分配金额（黑洞、国库、Paymaster系统托管池、Share-Mining 奖金池）
+4. 依次转账到黑洞、国库、paymaster pallet账户、share-mining 奖金池账户
+5. 计算并发放 Karma
+6. 处理舍入损失（余数分配给国库）
+7. 发出Exchanged事件
 
-## 与其他Pallet的集成
+**错误处理**：
+- `ZeroAmount`: 输入金额为0
+- `InvalidBps`: 分配比例总和不等于基点分母
+- `TransferFailed`: BUD转账失败
+- `KarmaMintFailed`: Karma发放失败
+- `PaymasterDepositFailed`: Paymaster系统托管池充值失败
 
-### 依赖关系
-- **pallet-balances**: 处理BUD代币转账
-- **pallet-karma**: 发放Karma福缘值
-- **pallet-paymaster**: 接收BUD用于代付gas费
-- （可选）**Share-Mining 奖金池账户**：作为收款账户由 runtime 配置提供（可为固定账户或由相关模块维护）
+## 与其他 Pallet 的集成
 
-### 配置示例
+- **Karma Pallet**: 调用 `reward_karma()` 发放兑换得到的 Karma
+- **Paymaster Pallet**: 调用 `increase_system_pool()` 将资金存入系统托管池而非简单转账
+- **Share-Mining Pallet**: 直接转账到其奖金池账户（PotAccount）
+
+## 运行时配置示例
 
 ```rust
 impl pallet_exchange::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
-    type PaymasterAccount = PaymasterAccountId;
-    type BlackholeAccount = BlackholeAccountId; 
+    type BlackholeAccount = BlackholeAccountId;
     type TreasuryAccount = TreasuryAccountId;
-    type ShareMiningAccount = ShareMiningAccountId;
     type ExchangeRate = ConstU128<1000>; // 1 BUD = 1000 Karma
-    type BurnBps = ConstU32<2000>;         // 20%
-    type TreasuryBps = ConstU32<6800>;     // 68%
-    type PaymasterBps = ConstU32<1000>;    // 10%
-    type ShareMiningBps = ConstU32<200>;   // 2%
-    type BpsDenominator = ConstU32<10000>; // 10000基点 = 100%
+    type BurnBps = ConstU32<2000>;       // 20%
+    type TreasuryBps = ConstU32<7000>;   // 70%
+    type PaymasterBps = ConstU32<800>;   // 8%
+    type ShareMiningBps = ConstU32<200>; // 2%
+    type BpsDenominator = ConstU32<10000>; // 基点分母
 }
 ```
 
-## 使用场景
-
-1. **用户体验提升**: 用户可以直接用BUD购买Karma，参与佛境生态
-2. **经济闭环**: 通过销毁机制控制代币通胀
-3. **生态发展**: 国库资金用于生态建设
-4. **降低门槛**: Paymaster资金池降低用户交易门槛
-
 ## 安全考虑
 
-- **不可逆性**: 确保Karma不能兑换回BUD
-- **账户安全**: 黑洞账户应该是不可控制的销毁地址
-- **权限控制**: 只有用户自己可以发起兑换
-- **余额保护**: 防止恶意消耗用户余额
-- **比例验证**: 确保四个分配比例之和等于分母，避免溢出与资金错配
+1. **算术安全**: 所有计算使用饱和运算避免溢出
+2. **原子性**: 失败时自动回滚，保证一致性
+3. **舍入处理**: 余数分配给国库，避免精度损失
+4. **权限控制**: 仅允许已签名的用户发起兑换
+5. **激励机制**: Share-mining奖金池提供持续的用户激励
 
-## 测试建议
+## 总结
 
-1. **单元测试**: 测试各种兑换金额和分配计算（包含 share-mining 分配）
-2. **集成测试**: 测试与karma和balances pallet的交互
-3. **边界测试**: 测试零金额、最大金额等边界情况
-4. **错误测试**: 测试各种错误场景的处理（包括比例配置不合法时的回滚）
+Exchange Pallet 通过将 BUD→Karma 兑换与多目标资金分配相结合，实现了代币经济的关键功能：通缩机制（黑洞）、治理资金（国库）、用户体验优化（Paymaster）和生态激励（Share-Mining），为佛境项目的可持续发展提供了坚实的经济基础。

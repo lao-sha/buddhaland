@@ -96,6 +96,42 @@ pub mod pallet {
     #[pallet::storage]
     pub type TotalServiceFees<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn pre_authorized_sponsors)]
+    pub type PreAuthorizedSponsors<T: Config> = StorageMap<
+        _, 
+        Blake2_128Concat, 
+        T::AccountId, 
+        (BalanceOf<T>, T::BlockNumber, BalanceOf<T>, u32), // (额度上限, 过期高度, 每笔上限, 每块上限)
+        OptionQuery
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn system_pool)]
+    pub type SystemPool<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn pending_auto_pays)]
+    pub type PendingAutoPays<T: Config> = StorageValue<
+        _, 
+        BoundedVec<(T::AccountId, T::AccountId, BalanceOf<T>), ConstU32<10_000>>, // (赞助方, 受益人, 金额)
+        ValueQuery
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn sponsor_whitelist)]
+    pub type SponsorWhitelist<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, (), OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn user_monthly_usage)]
+    pub type UserMonthlyUsage<T: Config> = StorageDoubleMap<
+        _, 
+        Blake2_128Concat, T::AccountId, 
+        Blake2_128Concat, u32, // 月份标识(yyyyMM)
+        BalanceOf<T>,
+        ValueQuery
+    >;
+
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -106,6 +142,8 @@ pub mod pallet {
         ProxyExecuted { user: T::AccountId, proxy: T::AccountId, fee: BalanceOf<T> },
         BatchExecuted { user: T::AccountId, proxy: T::AccountId, count: u32, total_fee: BalanceOf<T> },
         ServiceFeeCollected { amount: BalanceOf<T> },
+        /// 系统托管池资金增加 [增加金额, 新总额]
+        SystemPoolIncreased { amount: BalanceOf<T>, new_total: BalanceOf<T> },
     }
 
     #[pallet::error]
@@ -285,6 +323,30 @@ pub mod pallet {
             Self::deposit_event(Event::BatchExecuted { user, proxy, count: success, total_fee: estimated_total_fee });
 
             Ok(PostDispatchInfo { actual_weight: None, pays_fee: Pays::No })
+        }
+    }
+
+    /// Paymaster Pallet 公开接口，供其他 pallet 调用
+    impl<T: Config> Pallet<T> {
+        /// 系统托管池资金增加接口 - 由其他 pallet 调用（如 exchange pallet）
+        /// 此函数假定调用方已经处理好代币转账到 pallet 账户，只负责更新托管池记录
+        pub fn increase_system_pool(amount: BalanceOf<T>) -> DispatchResult {
+            SystemPool::<T>::mutate(|pool| {
+                *pool = pool.saturating_add(amount);
+                let new_total = *pool;
+                Self::deposit_event(Event::SystemPoolIncreased { amount, new_total });
+            });
+            Ok(())
+        }
+
+        /// 获取 Paymaster 的 pallet 账户地址
+        pub fn pallet_account() -> T::AccountId {
+            T::PalletId::get().into_account_truncating()
+        }
+
+        /// 查询系统托管池余额
+        pub fn get_system_pool_balance() -> BalanceOf<T> {
+            SystemPool::<T>::get()
         }
     }
 

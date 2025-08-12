@@ -22,6 +22,8 @@ std = [
     "frame-system/std",
     "pallet-balances/std",
     "pallet-karma/std",
+    "pallet-paymaster/std",
+    "pallet-share-mining/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
@@ -29,12 +31,16 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
     "pallet-karma/runtime-benchmarks",
+    "pallet-paymaster/runtime-benchmarks",
+    "pallet-share-mining/runtime-benchmarks",
 ]
 try-runtime = [
     "frame-support/try-runtime",
     "frame-system/try-runtime",
     "pallet-balances/try-runtime",
     "pallet-karma/try-runtime",
+    "pallet-paymaster/try-runtime",
+    "pallet-share-mining/try-runtime",
 ]
 
 [dependencies]
@@ -49,6 +55,10 @@ frame-benchmarking = { workspace = true, optional = true, default-features = fal
 pallet-balances = { workspace = true, default-features = false }
 # 依赖karma pallet进行karma发放
 pallet-karma = { path = "../karma", default-features = false }
+# 依赖paymaster pallet进行托管池充值
+pallet-paymaster = { path = "../paymaster", default-features = false }
+# 依赖share-mining pallet进行奖金池充值
+pallet-share-mining = { path = "../share-mining", default-features = false }
 
 [dev-dependencies]
 sp-core = { workspace = true }

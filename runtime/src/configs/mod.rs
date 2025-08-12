@@ -202,10 +202,12 @@ parameter_types! {
     pub const BlackholeAccountId: AccountId = AccountId::new([0u8; 32]);
     pub const TreasuryAccountId: AccountId = AccountId::new([1u8; 32]);
     pub const PaymasterAccountId: AccountId = AccountId::new([2u8; 32]);
+    pub const ShareMiningPotAccountId: AccountId = AccountId::new([3u8; 32]);
     pub const ExchangeRateConst: u128 = 1000;     // 1 BUD => 1000 Karma
     pub const BurnBpsConst: u32 = 2000;           // 20%
     pub const TreasuryBpsConst: u32 = 7000;       // 70%
-    pub const PaymasterBpsConst: u32 = 1000;      // 10%
+    pub const PaymasterBpsConst: u32 = 800;       // 8%
+    pub const ShareMiningBpsConst: u32 = 200;     // 2%
     pub const BpsDenominatorConst: u32 = 10000;   // 基点基数
 }
 
@@ -219,7 +221,26 @@ impl pallet_exchange::Config for Runtime {
     type BurnBps = BurnBpsConst;
     type TreasuryBps = TreasuryBpsConst;
     type PaymasterBps = PaymasterBpsConst;
+    type ShareMiningBps = ShareMiningBpsConst;
     type BpsDenominator = BpsDenominatorConst;
+}
+
+// Share-Mining Pallet 配置常量
+parameter_types! {
+    pub const MaxUrlLenConst: u32 = 512;                     // URL 最大长度 512 字节
+    pub const MaxParticipantsPerRoundConst: u32 = 50;        // 每轮最多处理 50 个参与者
+    pub const HttpTimeoutMillisConst: u64 = 10_000;          // HTTP 请求超时 10 秒
+    pub const UnsignedPriorityConst: TransactionPriority = 100; // 无签名交易优先级
+}
+
+impl pallet_share_mining::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
+    type PotAccount = ShareMiningPotAccountId;
+    type MaxUrlLen = MaxUrlLenConst;
+    type MaxParticipantsPerRound = MaxParticipantsPerRoundConst;
+    type HttpTimeoutMillis = HttpTimeoutMillisConst;
+    type UnsignedPriority = UnsignedPriorityConst;
 }
 
 // Paymaster Pallet 配置常量
@@ -241,17 +262,7 @@ impl pallet_paymaster::Config for Runtime {
     type WeightInfo = ();
 }
 
-// 为 Prayer Pallet 提供运行时配置
-parameter_types! {
-    pub const DefaultPrayerCost: u128 = 100; // 祈福默认消耗 100 Karma
-}
-
-impl pallet_prayer::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type DefaultPrayerCost = DefaultPrayerCost;
-}
-
-// 为 Ritual Pallet 提供运行时配置
+// 为 Commemorate Pallet 提供运行时配置
 parameter_types! {
     pub const DefaultIncenseCost: u128 = 10;    // 上香默认消耗
     pub const DefaultLampCost: u128 = 20;       // 点灯默认消耗
@@ -259,7 +270,7 @@ parameter_types! {
     pub const DefaultDonationCost: u128 = 50;   // 布施默认消耗
 }
 
-impl pallet_ritual::Config for Runtime {
+impl pallet_commemorate::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type DefaultIncenseCost = DefaultIncenseCost;
     type DefaultLampCost = DefaultLampCost;

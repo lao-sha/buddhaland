@@ -11,10 +11,12 @@ members = [
     "pallets/template",
     "pallets/karma",  # 添加karma pallet
     "pallets/prayer", # 新增祈福 pallet
-    "pallets/ritual", # 新增祭祀 pallet
+    "pallets/commemorate", # 新增纪念祭祀 pallet
     "pallets/exchange", # 新增BUD->Karma兑换 pallet
     "pallets/meditation",
     "pallets/paymaster",
+    "pallets/reward",
+    "pallets/share-mining",
     "runtime",
 ]
 resolver = "2"

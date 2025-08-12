@@ -1,27 +1,27 @@
-# Ritual Pallet (祭祀功德 Pallet)
+# Commemorate Pallet (纪念祭祀 Pallet)
 
 ## 概述
 
-`Ritual Pallet` 是 BuddhaLand 生态系统中专注于传统佛教祭祀行为的功德消费模块。它提供四种经典祭祀动作以及自定义功德行为的链上记录与 Karma 消费机制。
+`Commemorate Pallet` 是 BuddhaLand 生态系统中专注于纪念缅怀行为的功德消费模块。它提供四种经典纪念祭祀动作以及自定义纪念行为的链上记录与 Karma 消费机制。
 
 **核心定位**：
-- **职责专一**：仅处理祭祀行为的 Karma 消费，不涉及存储或复杂状态管理
-- **数据最小化**：采用事件驱动设计，通过 `RitualPerformed` 事件记录所有祭祀行为
+- **职责专一**：仅处理纪念祭祀行为的 Karma 消费，不涉及存储或复杂状态管理
+- **数据最小化**：采用事件驱动设计，通过 `CommemorativeRitualPerformed` 事件记录所有纪念行为
 - **依赖分离**：完全依赖 `Karma Pallet` 进行功德值管理，保持架构清晰
 
-## 术语对齐：祭祀行为（Ritual Actions）
+## 术语对齐：纪念祭祀行为（Commemorative Ritual Actions）
 
 基于《佛境文档.md》中的功德体系设计，本 Pallet 对齐以下佛教传统术语：
 
 | 中文术语 | 英文标识 | MeritAction 枚举 | 功能说明 |
 |---------|---------|------------------|----------|
-| 上香 | Incense | `MeritAction::Incense` | 燃香供佛，表达虔诚心意 |
-| 点灯 | Light Lamp | `MeritAction::LightLamp` | 点燃明灯，祈求智慧光明 |
-| 供花 | Offer Flower | `MeritAction::Flower` | 鲜花供养，庄严道场 |
-| 布施/捐赠 | Donation | `MeritAction::Donation` | 财物布施，积累功德 |
-| 自定义祭祀 | Custom Ritual | `MeritAction::Other(code)` | 扩展性祭祀行为 |
+| 上香 | Incense | `MeritAction::Incense` | 燃香供佛，表达对逝者的纪念与缅怀 |
+| 点灯 | Light Lamp | `MeritAction::LightLamp` | 点燃明灯，为逝者照亮归途 |
+| 供花 | Offer Flower | `MeritAction::Flower` | 鲜花供养，以美好花朵表达怀念 |
+| 布施/捐赠 | Donation | `MeritAction::Donation` | 财物布施，将功德回向给逝者 |
+| 自定义纪念 | Custom Memorial | `MeritAction::Other(code)` | 扩展性纪念行为 |
 
-**注意**：所有祭祀行为均通过 `pallet_karma::KarmaProvider::consume_karma_for_merit` 接口消费功德值。
+**注意**：所有纪念祭祀行为均通过 `pallet_karma::KarmaProvider::consume_karma_for_merit` 接口消费功德值。
 
 ## 依赖与集成
 
@@ -32,8 +32,8 @@
 ### 数据流向
 ```mermaid
 graph LR
-    User[用户] --> RitualPallet[Ritual Pallet]
-    RitualPallet --> KarmaPallet[Karma Pallet]
+    User[用户] --> CommemoratePallet[Commemorate Pallet]
+    CommemoratePallet --> KarmaPallet[Karma Pallet]
     KarmaPallet --> ChainEvents[链上事件]
     ChainEvents --> Frontend[前端监听]
 ```
@@ -44,7 +44,7 @@ graph LR
 ```rust
 pub trait Config: frame_system::Config {
     type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-    /// 各类祭祀动作的默认 Karma 消耗
+    /// 各类纪念祭祀动作的默认 Karma 消耗
     #[pallet::constant]
     type DefaultIncenseCost: Get<KarmaBalance>;
     #[pallet::constant]
@@ -57,29 +57,29 @@ pub trait Config: frame_system::Config {
 ```
 
 **配置说明**：
-- 四种祭祀行为各有独立的默认成本配置
+- 四种纪念祭祀行为各有独立的默认成本配置
 - 用户可选择性覆盖默认成本（通过 `amount` 参数）
 
 ## 存储设计
 
-**无链上存储**：`Ritual Pallet` 采用完全无状态设计，所有数据通过以下方式处理：
-- **祭祀记录**：通过 `RitualPerformed` 事件记录
+**无链上存储**：`Commemorate Pallet` 采用完全无状态设计，所有数据通过以下方式处理：
+- **纪念记录**：通过 `CommemorativeRitualPerformed` 事件记录
 - **功德消费**：委托给 `Karma Pallet` 的 `MeritConsumptionHistory` 存储
 - **历史查询**：通过事件索引或 Karma Pallet 的查询接口
 
 ## 事件类型
 
-### RitualPerformed
+### CommemorativeRitualPerformed
 ```rust
-/// 祭祀事件：账户、动作、消耗数量、备注
-RitualPerformed(T::AccountId, MeritAction, KarmaBalance, Vec<u8>),
+/// 纪念祭祀事件：账户、动作、消耗数量、备注
+CommemorativeRitualPerformed(T::AccountId, MeritAction, KarmaBalance, Vec<u8>),
 ```
 
 **参数说明**：
-- `T::AccountId`: 执行祭祀的用户账户
-- `MeritAction`: 具体的祭祀行为类型
+- `T::AccountId`: 执行纪念祭祀的用户账户
+- `MeritAction`: 具体的纪念祭祀行为类型
 - `KarmaBalance`: 实际消费的功德值数量
-- `Vec<u8>`: 用户提供的祭祀备注（如祈愿内容）
+- `Vec<u8>`: 用户提供的纪念备注（如怀念内容）
 
 ## 错误类型
 
@@ -94,11 +94,11 @@ pub enum Error<T> {
 
 **错误处理**：
 - Karma 相关错误（余额不足、消费失败等）由 `Karma Pallet` 处理
-- `Ritual Pallet` 仅处理自身逻辑错误
+- `Commemorate Pallet` 仅处理自身逻辑错误
 
 ## 可调用函数 (Extrinsics)
 
-### 1. incense - 上香
+### 1. incense - 上香纪念
 ```rust
 pub fn incense(
     origin: OriginFor<T>, 
@@ -106,11 +106,11 @@ pub fn incense(
     amount: Option<KarmaBalance>
 ) -> DispatchResultWithPostInfo
 ```
-- **功能**：燃香供佛，消费 Karma 表达虔诚
+- **功能**：燃香供佛，表达对逝者的纪念与缅怀
 - **默认成本**：`DefaultIncenseCost`
 - **自定义成本**：通过 `amount` 参数覆盖默认值
 
-### 2. light_lamp - 点灯
+### 2. light_lamp - 点灯照路
 ```rust
 pub fn light_lamp(
     origin: OriginFor<T>, 
@@ -118,10 +118,10 @@ pub fn light_lamp(
     amount: Option<KarmaBalance>
 ) -> DispatchResultWithPostInfo
 ```
-- **功能**：点燃明灯，祈求智慧与光明
+- **功能**：点燃明灯，为逝者照亮归途，祈求其在另一世界得到光明
 - **默认成本**：`DefaultLampCost`
 
-### 3. offer_flower - 供花
+### 3. offer_flower - 献花纪念
 ```rust
 pub fn offer_flower(
     origin: OriginFor<T>, 
@@ -129,10 +129,10 @@ pub fn offer_flower(
     amount: Option<KarmaBalance>
 ) -> DispatchResultWithPostInfo
 ```
-- **功能**：鲜花供养，庄严道场
+- **功能**：鲜花供养，以美好的花朵表达对逝者的怀念与敬意
 - **默认成本**：`DefaultFlowerCost`
 
-### 4. donate - 布施/捐赠
+### 4. donate - 功德回向
 ```rust
 pub fn donate(
     origin: OriginFor<T>, 
@@ -140,10 +140,10 @@ pub fn donate(
     amount: Option<KarmaBalance>
 ) -> DispatchResultWithPostInfo
 ```
-- **功能**：财物布施，积累功德
+- **功能**：财物布施，将功德回向给逝者，愿其在来世得到庇佑
 - **默认成本**：`DefaultDonationCost`
 
-### 5. custom - 自定义祭祀
+### 5. custom - 自定义纪念仪式
 ```rust
 pub fn custom(
     origin: OriginFor<T>, 
@@ -152,7 +152,7 @@ pub fn custom(
     amount: KarmaBalance
 ) -> DispatchResultWithPostInfo
 ```
-- **功能**：自定义祭祀行为，扩展性支持
+- **功能**：自定义纪念仪式，扩展性支持特殊的纪念行为
 - **成本**：必须显式指定 `amount`
 - **限制**：`code > 0`
 
@@ -169,7 +169,7 @@ pub fn custom(
 ## 运行时集成示例
 
 ```rust
-impl pallet_ritual::Config for Runtime {
+impl pallet_commemorate::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type DefaultIncenseCost = ConstU128<100>;      // 上香默认消费 100 Karma
     type DefaultLampCost = ConstU128<150>;         // 点灯默认消费 150 Karma
@@ -185,7 +185,7 @@ construct_runtime!(
     {
         System: frame_system,
         Karma: pallet_karma,
-        Ritual: pallet_ritual,  // 添加 Ritual Pallet
+        Commemorate: pallet_commemorate,  // 添加 Commemorate Pallet
     }
 );
 ```
@@ -195,36 +195,36 @@ construct_runtime!(
 ```typescript
 import { ApiPromise } from '@polkadot/api';
 
-// 上香祭祀
-async function performIncense(api: ApiPromise, keyring: any, note: string, customAmount?: number) {
+// 上香纪念
+async function performIncenseCommemoration(api: ApiPromise, keyring: any, note: string, customAmount?: number) {
   const noteBytes = new TextEncoder().encode(note);
   const amount = customAmount ? api.createType('Option<u128>', customAmount) : api.createType('Option<u128>', null);
   
-  const tx = api.tx.ritual.incense(noteBytes, amount);
+  const tx = api.tx.commemorate.incense(noteBytes, amount);
   const hash = await tx.signAndSend(keyring);
-  console.log('上香交易哈希:', hash.toHex());
+  console.log('上香纪念交易哈希:', hash.toHex());
 }
 
-// 监听祭祀事件
-async function listenRitualEvents(api: ApiPromise) {
+// 监听纪念祭祀事件
+async function listenCommemorativeEvents(api: ApiPromise) {
   api.query.system.events((events: any) => {
     events.forEach((record: any) => {
       const { event } = record;
-      if (event.section === 'ritual' && event.method === 'RitualPerformed') {
+      if (event.section === 'commemorate' && event.method === 'CommemorativeRitualPerformed') {
         const [account, action, amount, note] = event.data;
-        console.log(`祭祀记录: ${account} 执行 ${action} 消费 ${amount} Karma`);
+        console.log(`纪念记录: ${account} 执行 ${action} 消费 ${amount} Karma`);
         console.log(`备注: ${new TextDecoder().decode(note)}`);
       }
     });
   });
 }
 
-// 批量祭祀示例
-async function performMultipleRituals(api: ApiPromise, keyring: any) {
+// 批量纪念祭祀示例
+async function performMultipleCommemorativeRituals(api: ApiPromise, keyring: any) {
   const txs = [
-    api.tx.ritual.incense(new TextEncoder().encode('祈求平安'), null),
-    api.tx.ritual.lightLamp(new TextEncoder().encode('点亮智慧'), null),
-    api.tx.ritual.offerFlower(new TextEncoder().encode('庄严道场'), null),
+    api.tx.commemorate.incense(new TextEncoder().encode('缅怀先人'), null),
+    api.tx.commemorate.lightLamp(new TextEncoder().encode('照亮归途'), null),
+    api.tx.commemorate.offerFlower(new TextEncoder().encode('献花纪念'), null),
   ];
   
   const batchTx = api.tx.utility.batch(txs);
@@ -242,25 +242,25 @@ async function performMultipleRituals(api: ApiPromise, keyring: any) {
 ### 数据隐私
 - **备注内容**：存储在事件中，链上公开可见
 - **敏感信息**：避免在 `note` 参数中包含敏感个人信息
-- **数据最小化**：仅记录必要的祭祀行为数据
+- **数据最小化**：仅记录必要的纪念祭祀行为数据
 
 ## 序列图（简化）
 
 ```mermaid
 sequenceDiagram
     participant User as 用户 (dApp)
-    participant Ritual as Ritual Pallet
+    participant Commemorate as Commemorate Pallet
     participant Karma as Karma Pallet
     participant Event as 链上事件
 
-    User->>Ritual: incense(note, amount)
-    Ritual->>Karma: consume_karma_for_merit(who, cost, MeritAction::Incense)
-    Karma-->>Ritual: DispatchResult
+    User->>Commemorate: incense(note, amount)
+    Commemorate->>Karma: consume_karma_for_merit(who, cost, MeritAction::Incense)
+    Karma-->>Commemorate: DispatchResult
     alt 消费成功
-        Ritual->>Event: RitualPerformed(who, Incense, cost, note)
-        Ritual-->>User: Ok
+        Commemorate->>Event: CommemorativeRitualPerformed(who, Incense, cost, note)
+        Commemorate-->>User: Ok
     else 消费失败
-        Ritual-->>User: Error("ConsumeFailed")
+        Commemorate-->>User: Error("ConsumeFailed")
     end
 ```
 
@@ -320,7 +320,7 @@ benchmarks! {
         let amount = Some(200u128.into());
     }: incense(RawOrigin::Signed(caller), note, amount)
 
-    custom_ritual {
+    custom_commemorative_ritual {
         let caller: T::AccountId = whitelisted_caller();
         <pallet_karma::Pallet<T> as KarmaProvider<T::AccountId>>::reward_karma(
             &caller, 1000u128.into(), pallet_karma::RewardReason::ManualAdjust
@@ -339,19 +339,19 @@ impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext(), crate::mock::Tes
 cargo build --release --features runtime-benchmarks
 .\target\release\buddhaland-node benchmark pallet ^
     --chain dev ^
-    --pallet pallet_ritual ^
+    --pallet pallet_commemorate ^
     --extrinsic "*" ^
     --steps 50 ^
     --repeat 20 ^
-    --output ./pallets/ritual/src/weights.rs
+    --output ./pallets/commemorate/src/weights.rs
 ```
 
 ### 4. Runtime 集成权重
 
 ```rust
-impl pallet_ritual::Config for Runtime {
+impl pallet_commemorate::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type WeightInfo = pallet_ritual::weights::SubstrateWeight<Runtime>; // 使用生成的权重
+    type WeightInfo = pallet_commemorate::weights::SubstrateWeight<Runtime>; // 使用生成的权重
     type DefaultIncenseCost = ConstU128<100>;
     // ... 其他配置
 }
@@ -360,13 +360,13 @@ impl pallet_ritual::Config for Runtime {
 ## 测试建议
 
 ### 单元测试
-- 测试各祭祀函数的 Karma 消费逻辑
+- 测试各纪念祭祀函数的 Karma 消费逻辑
 - 验证事件正确触发
 - 测试错误处理（Karma 不足、无效参数等）
 
 ### 集成测试
 - 与 `Karma Pallet` 的集成测试
-- 批量祭祀交易测试
+- 批量纪念祭祀交易测试
 - 前端事件监听测试
 
 ## 兼容性与扩展性
@@ -376,10 +376,10 @@ impl pallet_ritual::Config for Runtime {
 - 配置参数采用常量形式，便于 runtime 升级
 
 ### 扩展方向
-- **季节性祭祀**：根据佛教节日添加特殊祭祀行为
-- **集体祭祀**：支持多用户协作的大型法会活动
-- **NFT 集成**：将祭祀行为与数字文物、功德证书关联
-- **元宇宙应用**：与 WebGL 3D 场景联动的沉浸式祭祀体验
+- **季节性纪念**：根据传统节日添加特殊纪念行为
+- **集体纪念**：支持多用户协作的大型纪念活动
+- **NFT 集成**：将纪念行为与数字文物、纪念证书关联
+- **元宇宙应用**：与 WebGL 3D 场景联动的沉浸式纪念体验
 
 ---
 

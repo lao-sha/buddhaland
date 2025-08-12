@@ -111,6 +111,8 @@ pub mod pallet {
         LinkVerified(T::AccountId, Vec<u8>, bool),
         /// 完成一轮平均分配 [round_id, winners, per_user, total_paid]
         RewardsDistributed(u64, u32, BalanceOf<T>, BalanceOf<T>),
+        /// 奖金池资金增加 [amount]
+        PotIncreased(BalanceOf<T>),
     }
 
     #[pallet::error]
@@ -312,3 +314,39 @@ pub mod pallet {
         }
     }
 }
+
+
+    /// 增加奖金池资金 - 供其他 pallet 调用（如 exchange pallet）
+    /// - amount: 要增加的 BUD 数量
+    /// 安全性：
+    /// - 不检查调用权限，允许其他 pallet 注入资金
+    /// - 仅更新账户余额，不涉及复杂状态
+    #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(0,0))]
+    pub fn increase_pot_balance(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
+        // 函数级注释：
+        // 1. 确保是已签名调用（通常由其他 pallet 通过 dispatch 调用）
+        // 2. 向 PotAccount 转入指定金额
+        // 3. 发出事件通知奖金池增加
+        let _who = ensure_signed(origin)?;
+        let pot_account = T::PotAccount::get();
+        
+        // 此函数预期被其他 pallet 调用，调用方负责资金转移
+        // 这里仅发出通知事件
+        Self::deposit_event(Event::PotIncreased(amount));
+        Ok(())
+    }
+    }
+
+    // 添加公开模块函数供其他 pallet 直接调用
+    impl<T: Config> Pallet<T> {
+        /// 获取奖金池账户ID - 供其他 pallet 获取转账目标
+        pub fn pot_account() -> T::AccountId {
+            T::PotAccount::get()
+        }
+
+        /// 获取奖金池当前余额
+        pub fn pot_balance() -> BalanceOf<T> {
+            let pot = T::PotAccount::get();
+            T::Currency::free_balance(&pot)
+        }
+    }

@@ -249,4 +249,74 @@ mod runtime {
 	// Include the paymaster pallet in the runtime.
 	#[runtime::pallet_index(13)]
 	pub type Paymaster = pallet_paymaster;
+
+	// Include the share-mining pallet in the runtime.
+	#[runtime::pallet_index(14)]
+	pub type ShareMining = pallet_share_mining;
+
+	// Include the commemorate pallet in the runtime.
+	#[runtime::pallet_index(10)]
+	pub type Commemorate = pallet_commemorate;
 }
+
+use codec::{Encode, Decode};
+use frame_support::traits::tokens::imbalance::Imbalance;
+use sp_runtime::{
+    transaction_validity::{ValidTransaction, InvalidTransaction, TransactionValidityError},
+    traits::DispatchInfoOf,
+};
+use sp_std::marker::PhantomData;
+
+/// 自动代付交易扩展（示例）
+/// 目的：在交易进入池前检查是否满足免签代付条件，并在 prepare 阶段进行必要的准备工作
+#[derive(Encode, Decode, Clone, Eq, PartialEq, scale_info::TypeInfo)]
+pub struct AutoPayTxExtension<Runtime>(PhantomData<Runtime>);
+
+impl<Runtime> sp_runtime::TransactionExtension<Runtime::RuntimeCall> for AutoPayTxExtension<Runtime>
+where
+    Runtime: frame_system::Config + pallet_paymaster::Config,
+{
+    type Implicit = ();     // 可根据需要放置隐式参数
+    type Val = ();          // validate 阶段产物
+    type Pre = ();          // prepare 阶段产物
+
+    /// 交易池校验阶段（off-chain/on-chain皆会调用，不可变）
+    /// - 检查调用是否为可免签代付的范围（白名单）
+    /// - 检查赞助方是否预授权且未过期
+    /// - 不在此处做状态写入
+    fn validate(
+        &self,
+        who: &<Runtime as frame_system::Config>::AccountId,
+        call: &Runtime::RuntimeCall,
+        info: &DispatchInfoOf<Runtime::RuntimeCall>,
+        _len: usize,
+        _implicit: &Self::Implicit,
+        _ctx: &mut sp_runtime::transaction_validity::Context,
+    ) -> sp_runtime::TransactionValidity {
+        // 示例：仅当调用属于特定模块且用户具备资格时，才标记有效
+        // 实际中可解构 call，判断是否需要自动代付
+        let _ = (who, call, info);
+        Ok(ValidTransaction::default())
+    }
+
+    /// 区块执行前的准备阶段（on-chain，可变）
+    /// - 可进行系统池余额预检查、预保留
+    /// - 也可登记“本次交易启用免签代付”的上下文，供 call 执行阶段读取
+    fn prepare(
+        self,
+        _val: Self::Val,
+        _who: &<Runtime as frame_system::Config>::AccountId,
+        _call: &Runtime::RuntimeCall,
+        _info: &DispatchInfoOf<Runtime::RuntimeCall>,
+        _len: usize,
+        _implicit: Self::Implicit,
+    ) -> Result<Self::Pre, TransactionValidityError> {
+        Ok(())
+    }
+}
+
+// 将扩展接入 runtime（示例）
+type RuntimeTransactionExtensions = (
+    sp_runtime::AsTransactionExtension<AutoPayTxExtension<Runtime>>, // 适配器：兼容旧接口的写法
+    // 其他扩展...
+);

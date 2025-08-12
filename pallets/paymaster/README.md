@@ -6,6 +6,12 @@
 
 Paymaster Pallet 是一个专门设计用于处理代理支付交易费用的模块，允许指定的代理账户代替用户支付gas费用，从而降低用户使用门槛，提升用户体验。
 
+### 系统托管池
+- **集中资金管理**: 通过系统托管池统一管理来自exchange pallet等外部模块的资金
+- **免签名代付**: 支持使用托管池资金进行免签名的代理支付
+- **资金来源**: 主要通过exchange pallet的BUD兑换收入和其他生态模块注入资金
+- **透明追踪**: 所有托管池资金变动都有完整的事件记录
+
 ## 核心功能特性
 
 ### 1. 预付费系统
@@ -31,7 +37,13 @@ Paymaster Pallet 是一个专门设计用于处理代理支付交易费用的模
 - **费用限额**: 为每个代理设置单次交易费用上限
 - **启用/禁用**: 灵活控制代理状态
 
-### 4. 批量交易处理
+### 4. 系统托管池管理
+- **外部资金注入**: 支持其他pallet（如exchange）向托管池注入资金
+- **免签名代付**: 使用托管池资金进行无需用户签名的代理支付
+- **资金统计**: 实时跟踪托管池总额和使用情况
+- **安全控制**: 严格的权限控制确保资金安全
+
+### 批量交易处理
 - **批量执行**: 支持一次性执行多个交易，降低总体费用
 - **数量限制**: 可配置的最大批量交易数量
 - **原子性**: 批量交易要么全部成功，要么全部失败
@@ -479,26 +491,15 @@ pub enum ProxyPermission {
 ### 主要事件类型
 ```rust
 pub enum Event<T: Config> {
-    /// 预付费充值 [用户, 金额]
     PrepaidDeposited { user: T::AccountId, amount: BalanceOf<T> },
-    
-    /// 预付费提取 [用户, 金额]
     PrepaidWithdrawn { user: T::AccountId, amount: BalanceOf<T> },
-    
-    /// 代理配置添加 [用户, 代理, 权限]
     ProxyAdded { user: T::AccountId, proxy: T::AccountId, permission: ProxyPermission },
-    
-    /// 代理配置移除 [用户, 代理]
     ProxyRemoved { user: T::AccountId, proxy: T::AccountId },
-    
-    /// 代理交易执行 [用户, 代理, 费用]
     ProxyExecuted { user: T::AccountId, proxy: T::AccountId, fee: BalanceOf<T> },
-    
-    /// 批量交易执行 [用户, 代理, 交易数量, 总费用]
     BatchExecuted { user: T::AccountId, proxy: T::AccountId, count: u32, total_fee: BalanceOf<T> },
-    
-    /// 服务费收取 [金额]
     ServiceFeeCollected { amount: BalanceOf<T> },
+    /// 系统托管池资金增加 [增加金额, 新总额]
+    SystemPoolIncreased { amount: BalanceOf<T>, new_total: BalanceOf<T> },
 }
 ```
 
@@ -683,3 +684,31 @@ const proxyTx = api.tx.paymaster.proxyExecute(userAccount, call, estimatedFee);
 - 提交 GitHub Issue
 - 发送邮件至项目维护者
 - 加入项目讨论群组
+
+
+## 免签名代付机制（预授权 + 系统托管池 + 交易扩展）
+
+- 设计目标：在特定场景下为用户自动代付 Gas/费用，无需第三方实时签名，同时确保资金安全与系统可控。
+- 安全控制：
+  - 预授权：为赞助方设置额度上限、每笔上限、过期高度、每块处理上限
+  - 系统托管池：提前注资至 Pallet 托管账户，避免实时签名
+  - 队列限速：PendingAutoPays 队列 + 每区块最多处理 MaxAutoPayPerBlock
+  - 白名单（可选）：SponsorWhitelist 控制可用赞助方
+- 事件：AutoPayAuthorized、AutoPayRevoked、SystemPoolFunded、AutoPayRequested、AutoPayProcessed、AutoPayFailed
+
+### 外部调用（新增）
+- authorize_sponsor(sponsor, amount, expire_at, per_tx_limit, per_block_limit)
+- revoke_sponsor(sponsor)
+- fund_system_pool(amount)
+- request_auto_pay(sponsor, amount)
+- deposit_for_user(beneficiary, amount)（保留常规路径）
+
+### 运行流程
+1. 管理员 authorize_sponsor 配置赞助方权限与额度
+2. 赞助方/治理账户 fund_system_pool 注资
+3. 用户 request_auto_pay 发起免签请求，进入队列
+4. on_initialize 限速批处理，成功触发 AutoPayProcessed 事件
+
+### 交易扩展（概述）
+- 在 validate 阶段做不可变校验，在 prepare 阶段做上链准备
+- 参考 Runtime 中的 AutoPayTxExtension 注册

@@ -8,19 +8,18 @@ use sp_runtime::traits::Saturating;
 use sp_std::vec::Vec;
 
 use pallet_karma::{self as karma, KarmaBalance, RewardReason, KarmaProvider};
+use pallet_paymaster;
+use pallet_share_mining;
 
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + pallet_paymaster::Config + pallet_share_mining::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         /// BUD代币接口（通常为Balances）
         type Currency: Currency<Self::AccountId>;
-        /// paymaster pallet的账户ID
-        #[pallet::constant]
-        type PaymasterAccount: Get<Self::AccountId>;
         /// 黑洞账户ID（不可恢复的销毁地址）
         #[pallet::constant]
         type BlackholeAccount: Get<Self::AccountId>;
@@ -45,9 +44,6 @@ pub mod pallet {
         /// 分配比例：share-mining 奖金池占比（基点）
         #[pallet::constant]
         type ShareMiningBps: Get<u32>;
-        /// share-mining 奖金池账户ID
-        #[pallet::constant]
-        type ShareMiningAccount: Get<Self::AccountId>;
     }
 
     #[pallet::pallet]
@@ -71,11 +67,15 @@ pub mod pallet {
         TransferFailed,
         /// Karma发放失败
         KarmaMintFailed,
+        /// Paymaster系统托管池充值失败
+        PaymasterDepositFailed,
+        /// Share-Mining奖金池充值失败
+        ShareMiningDepositFailed,
     }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// 用户用BUD兑换Karma，并将BUD按比例分配到黑洞/国库/paymaster/share-mining
+        /// 用户用BUD兑换Karma，并将BUD按比例分配到黑洞/国库/paymaster系统托管池/share-mining奖金池
         /// - amount: 兑换的BUD数量
         /// 安全性：
         /// - 校验 BurnBps + TreasuryBps + PaymasterBps + ShareMiningBps == BpsDenominator
@@ -106,17 +106,20 @@ pub mod pallet {
             let remainder = amount.saturating_sub(allocated);
             let treasury_total = treasury.saturating_add(remainder);
 
-            // 转账：who -> 黑洞/国库/paymaster/share-mining
+            // 转账：who -> 黑洞/国库/paymaster pallet账户/share-mining 奖金池
             let bh = T::BlackholeAccount::get();
             let tr = T::TreasuryAccount::get();
-            let pm = T::PaymasterAccount::get();
-            let sm = T::ShareMiningAccount::get();
+            let pm_account = pallet_paymaster::Pallet::<T>::pallet_account();
+            let sm_pot = pallet_share_mining::Pallet::<T>::pot_account();
 
             // 使用Balances::transfer(AllowDeath)
             T::Currency::transfer(&who, &bh, burn.into(), AllowDeath).map_err(|_| Error::<T>::TransferFailed)?;
             T::Currency::transfer(&who, &tr, treasury_total.into(), AllowDeath).map_err(|_| Error::<T>::TransferFailed)?;
-            T::Currency::transfer(&who, &pm, paymaster.into(), AllowDeath).map_err(|_| Error::<T>::TransferFailed)?;
-            T::Currency::transfer(&who, &sm, share_mining.into(), AllowDeath).map_err(|_| Error::<T>::TransferFailed)?;
+            // 转账到 paymaster pallet 账户，然后增加系统托管池记录
+            T::Currency::transfer(&who, &pm_account, paymaster.into(), AllowDeath).map_err(|_| Error::<T>::TransferFailed)?;
+            pallet_paymaster::Pallet::<T>::increase_system_pool(paymaster.into()).map_err(|_| Error::<T>::PaymasterDepositFailed)?;
+            // 转账到 share-mining 奖金池账户
+            T::Currency::transfer(&who, &sm_pot, share_mining.into(), AllowDeath).map_err(|_| Error::<T>::TransferFailed)?;
 
             // 计算Karma并发放
             let karma_out: KarmaBalance = amount.saturating_mul(T::ExchangeRate::get()).into();
