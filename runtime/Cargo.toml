@@ -116,6 +116,12 @@ runtime-benchmarks = [
 	"pallet-transaction-payment/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"pallet-karma/runtime-benchmarks",
+	"pallet-prayer/runtime-benchmarks",
+	"pallet-commemorate/runtime-benchmarks",
+	"pallet-exchange/runtime-benchmarks",
+	"pallet-meditation/runtime-benchmarks",
+	"pallet-paymaster/runtime-benchmarks",
+	"pallet-share-mining/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -132,6 +138,12 @@ try-runtime = [
 	"pallet-transaction-payment/try-runtime",
 	"sp-runtime/try-runtime",
 	"pallet-karma/try-runtime",
+	"pallet-prayer/try-runtime",
+	"pallet-commemorate/try-runtime",
+	"pallet-exchange/try-runtime",
+	"pallet-meditation/try-runtime",
+	"pallet-paymaster/try-runtime",
+	"pallet-share-mining/try-runtime",
 ]
 
 # Enable the metadata hash generation.

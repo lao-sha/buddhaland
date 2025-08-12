@@ -1,386 +1,353 @@
-# Commemorate Pallet (纪念祭祀 Pallet)
+# Commemorate Pallet
 
 ## 概述
 
-`Commemorate Pallet` 是 BuddhaLand 生态系统中专注于纪念缅怀行为的功德消费模块。它提供四种经典纪念祭祀动作以及自定义纪念行为的链上记录与 Karma 消费机制。
+`Commemorate Pallet` 是 BuddhaLand 佛境生态系统中的祭奠纪念模块，为用户提供创建和管理链上祭念馆的功能。每个用户可以为逝去的亲人、朋友或其他重要的人创建专属的数字纪念空间，并进行各种传统和现代的祭奠纪念活动。
 
-**核心定位**：
-- **职责专一**：仅处理纪念祭祀行为的 Karma 消费，不涉及存储或复杂状态管理
-- **数据最小化**：采用事件驱动设计，通过 `CommemorativeRitualPerformed` 事件记录所有纪念行为
-- **依赖分离**：完全依赖 `Karma Pallet` 进行功德值管理，保持架构清晰
+该 pallet 支持：
+- **自主创建**：每个账户可以无限创建祭念馆和链上陵墓
+- **IPFS 存储**：祭奠图片、音频、视频、长文等大文件存储在 IPFS 上，区块链仅存储文件哈希
+- **传统祭奠**：献花、点烛、烧香、供奉食物、烧纸钱、磕头拜祭等传统仪式
+- **现代纪念**：献花、点祈福灯、写留言、播放音乐、分享回忆、在线追思等现代活动
+- **多媒体支持**：支持图片、音频、视频等多种格式的纪念媒体
+- **隐私控制**：支持公开和私密两种访问模式
+- **永久保存**：所有祭奠记录都将永久保存在区块链上
 
-## 术语对齐：纪念祭祀行为（Commemorative Ritual Actions）
+## 术语对齐
 
-基于《佛境文档.md》中的功德体系设计，本 Pallet 对齐以下佛教传统术语：
-
-| 中文术语 | 英文标识 | MeritAction 枚举 | 功能说明 |
-|---------|---------|------------------|----------|
-| 上香 | Incense | `MeritAction::Incense` | 燃香供佛，表达对逝者的纪念与缅怀 |
-| 点灯 | Light Lamp | `MeritAction::LightLamp` | 点燃明灯，为逝者照亮归途 |
-| 供花 | Offer Flower | `MeritAction::Flower` | 鲜花供养，以美好花朵表达怀念 |
-| 布施/捐赠 | Donation | `MeritAction::Donation` | 财物布施，将功德回向给逝者 |
-| 自定义纪念 | Custom Memorial | `MeritAction::Other(code)` | 扩展性纪念行为 |
-
-**注意**：所有纪念祭祀行为均通过 `pallet_karma::KarmaProvider::consume_karma_for_merit` 接口消费功德值。
+- **祭念馆**：为逝者创建的数字纪念空间，类似于现实中的墓地或灵堂
+- **链上陵墓**：祭念馆的别称，强调其区块链存储和永久性特征
+- **祭奠活动**：在祭念馆中进行的各种纪念仪式
+- **传统祭奠**：基于传统文化的祭祀仪式
+- **现代纪念**：结合现代科技的纪念活动
+- **IPFS 存储**：分布式文件存储系统，确保大文件的可靠存储
+- **文件哈希**：IPFS 文件的唯一标识符，存储在区块链上
+- **Karma消费**：进行祭奠活动需要消耗的功德值
 
 ## 依赖与集成
 
-### 外部依赖
-- **Karma Pallet**: 提供 `KarmaProvider` trait 和 `MeritAction` 枚举
-- **Frame Support**: 基础区块链功能支持
+### 核心依赖
+- **`pallet_karma`**：提供 Karma 系统支持，处理功德值的消费和奖励
+- **`pallet_timestamp`**：提供时间戳服务，记录祭念馆创建和祭奠活动时间
+- **`frame_system`**：Substrate 系统模块，提供基础账户和权限管理
 
-### 数据流向
-```mermaid
-graph LR
-    User[用户] --> CommemoratePallet[Commemorate Pallet]
-    CommemoratePallet --> KarmaPallet[Karma Pallet]
-    KarmaPallet --> ChainEvents[链上事件]
-    ChainEvents --> Frontend[前端监听]
+### 外部依赖
+- **IPFS 网络**：分布式文件存储，保证媒体文件的持久化和可访问性
+
+### 集成设计
+```rust
+// Runtime 中的集成配置
+impl pallet_commemorate::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MaxNameLength = MaxNameLength;
+    type MaxDescriptionLength = MaxDescriptionLength;
+    type MaxMessageLength = MaxMessageLength;
+    type MaxMemorialsPerAccount = MaxMemorialsPerAccount;
+    type CreateMemorialCost = CreateMemorialCost;
+    type BaseTraditionalCost = BaseTraditionalCost;
+    type BaseModernCost = BaseModernCost;
+    
+    // IPFS 相关配置
+    type MaxIpfsHashLength = MaxIpfsHashLength;
+    type MaxFileNameLength = MaxFileNameLength;
+    type MaxFilesPerMemorial = MaxFilesPerMemorial;
+    type MaxFilesPerCeremony = MaxFilesPerCeremony;
+}
 ```
 
 ## 类型定义与配置
 
-### Config Trait
+### 核心类型
+
+#### IpfsFile
 ```rust
-pub trait Config: frame_system::Config {
-    type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-    /// 各类纪念祭祀动作的默认 Karma 消耗
-    #[pallet::constant]
-    type DefaultIncenseCost: Get<KarmaBalance>;
-    #[pallet::constant]
-    type DefaultLampCost: Get<KarmaBalance>;
-    #[pallet::constant]
-    type DefaultFlowerCost: Get<KarmaBalance>;
-    #[pallet::constant]
-    type DefaultDonationCost: Get<KarmaBalance>;
+pub struct IpfsFile {
+    pub hash: Vec<u8>,      // IPFS 文件哈希
+    pub file_type: Vec<u8>, // 文件类型 (image, audio, video, document)
+    pub size: u64,          // 文件大小（字节）
+    pub name: Vec<u8>,      // 文件名称
 }
 ```
 
-**配置说明**：
-- 四种纪念祭祀行为各有独立的默认成本配置
-- 用户可选择性覆盖默认成本（通过 `amount` 参数）
+#### MemorialInfo
+```rust
+pub struct MemorialInfo<AccountId> {
+    pub creator: AccountId,                // 创建者
+    pub name: Vec<u8>,                    // 逝者姓名
+    pub birth_date: Option<Vec<u8>>,      // 生日（可选）
+    pub death_date: Option<Vec<u8>>,      // 逝世日期（可选）
+    pub description: Vec<u8>,             // 纪念描述
+    pub created_at: u64,                  // 创建时间戳
+    pub total_visits: u32,                // 总访问次数
+    pub total_ceremonies: u32,            // 总祭奠次数
+    pub is_public: bool,                  // 是否公开访问
+    pub avatar_ipfs: Option<Vec<u8>>,     // 头像照片 IPFS 哈希
+    pub gallery_files: Vec<IpfsFile>,     // 纪念相册 IPFS 文件列表
+}
+```
+
+#### CeremonyRecord
+```rust
+pub struct CeremonyRecord<AccountId> {
+    pub participant: AccountId,           // 祭奠者
+    pub ceremony_type: CeremonyType,     // 祭奠类型
+    pub karma_cost: KarmaBalance,        // 消耗的 Karma
+    pub message: Vec<u8>,                // 祭奠留言
+    pub timestamp: u64,                  // 祭奠时间戳
+    pub attached_files: Vec<IpfsFile>,   // 附件文件（图片、音频、视频等）
+}
+```
+
+### 配置参数
+
+| 参数 | 类型 | 说明 | 推荐值 |
+|------|------|------|--------|
+| `MaxNameLength` | `u32` | 逝者姓名最大长度 | 100 |
+| `MaxDescriptionLength` | `u32` | 描述信息最大长度 | 1000 |
+| `MaxMessageLength` | `u32` | 留言最大长度 | 500 |
+| `MaxMemorialsPerAccount` | `u32` | 每账户最大祭念馆数 | 50 |
+| `CreateMemorialCost` | `KarmaBalance` | 创建祭念馆费用 | 100 |
+| `BaseTraditionalCost` | `KarmaBalance` | 传统祭奠基础费用 | 20 |
+| `BaseModernCost` | `KarmaBalance` | 现代纪念基础费用 | 15 |
+| `MaxIpfsHashLength` | `u32` | IPFS 哈希最大长度 | 64 |
+| `MaxFileNameLength` | `u32` | 文件名最大长度 | 256 |
+| `MaxFilesPerMemorial` | `u32` | 每个祭念馆最大文件数 | 100 |
+| `MaxFilesPerCeremony` | `u32` | 每次祭奠最大附件数 | 10 |
+
+## IPFS 集成说明
+
+### 支持的文件类型
+- **图片**：JPEG、PNG、GIF、WebP 等格式的祭奠照片和纪念图片
+- **音频**：MP3、WAV、AAC 等格式的纪念音乐和语音留言
+- **视频**：MP4、WebM、AVI 等格式的纪念视频和生活片段
+- **文档**：PDF、TXT、DOC 等格式的长篇纪念文章和传记
+
+### IPFS 存储流程
+1. **客户端上传**：前端将媒体文件上传到 IPFS 网络
+2. **获取哈希**：IPFS 返回文件的唯一哈希标识符
+3. **链上存储**：将文件哈希、类型、大小等元数据存储到区块链
+4. **关联祭念馆**：将文件与对应的祭念馆或祭奠记录关联
+
+### 文件访问
+- 通过 IPFS 哈希从分布式网络获取文件内容
+- 支持多个 IPFS 网关确保文件可访问性
+- 客户端可缓存常用文件提升访问速度
 
 ## 存储设计
 
-**无链上存储**：`Commemorate Pallet` 采用完全无状态设计，所有数据通过以下方式处理：
-- **纪念记录**：通过 `CommemorativeRitualPerformed` 事件记录
-- **功德消费**：委托给 `Karma Pallet` 的 `MeritConsumptionHistory` 存储
-- **历史查询**：通过事件索引或 Karma Pallet 的查询接口
+### 主要存储映射
+
+1. **Memorials**: `StorageMap<u32, MemorialInfo>`
+   - 存储所有祭念馆的详细信息，包括 IPFS 文件列表
+
+2. **NextMemorialId**: `StorageValue<u32>`
+   - 下一个可用的祭念馆ID
+
+3. **AccountMemorials**: `StorageMap<AccountId, BoundedVec<u32>>`
+   - 每个账户拥有的祭念馆ID列表
+
+4. **CeremonyRecords**: `StorageDoubleMap<u32, u32, CeremonyRecord>`
+   - 祭奠活动记录，包含附件文件信息
+
+5. **MemorialRecordCount**: `StorageMap<u32, u32>`
+   - 每个祭念馆的祭奠记录数量
 
 ## 事件类型
 
-### CommemorativeRitualPerformed
 ```rust
-/// 纪念祭祀事件：账户、动作、消耗数量、备注
-CommemorativeRitualPerformed(T::AccountId, MeritAction, KarmaBalance, Vec<u8>),
-```
-
-**参数说明**：
-- `T::AccountId`: 执行纪念祭祀的用户账户
-- `MeritAction`: 具体的纪念祭祀行为类型
-- `KarmaBalance`: 实际消费的功德值数量
-- `Vec<u8>`: 用户提供的纪念备注（如怀念内容）
-
-## 错误类型
-
-```rust
-pub enum Error<T> {
-    /// 备注内容过长或无效
-    InvalidNote,
-    /// 无效的自定义动作编号
-    InvalidCustomAction,
+pub enum Event<T: Config> {
+    /// 祭念馆创建成功 [创建者, 祭念馆ID, 逝者姓名]
+    MemorialCreated(T::AccountId, u32, Vec<u8>),
+    
+    /// 祭念馆信息更新 [祭念馆ID, 更新者]
+    MemorialUpdated(u32, T::AccountId),
+    
+    /// 祭奠活动完成 [祭念馆ID, 祭奠者, 祭奠类型, 消耗Karma]
+    CeremonyPerformed(u32, T::AccountId, CeremonyType, KarmaBalance),
+    
+    /// 祭念馆访问 [祭念馆ID, 访问者]
+    MemorialVisited(u32, T::AccountId),
+    
+    /// IPFS 文件上传成功 [祭念馆ID, 文件哈希, 文件类型]
+    IpfsFileUploaded(u32, Vec<u8>, Vec<u8>),
+    
+    /// 祭奠媒体文件添加 [祭念馆ID, 祭奠者, 文件数量]
+    CeremonyMediaAdded(u32, T::AccountId, u32),
 }
 ```
 
-**错误处理**：
-- Karma 相关错误（余额不足、消费失败等）由 `Karma Pallet` 处理
-- `Commemorate Pallet` 仅处理自身逻辑错误
+## 可调用函数
 
-## 可调用函数 (Extrinsics)
+### 1. create_memorial
+创建新的祭念馆
 
-### 1. incense - 上香纪念
-```rust
-pub fn incense(
-    origin: OriginFor<T>, 
-    note: Vec<u8>, 
-    amount: Option<KarmaBalance>
-) -> DispatchResultWithPostInfo
-```
-- **功能**：燃香供佛，表达对逝者的纪念与缅怀
-- **默认成本**：`DefaultIncenseCost`
-- **自定义成本**：通过 `amount` 参数覆盖默认值
+**参数**：
+- `name: Vec<u8>` - 逝者姓名
+- `birth_date: Option<Vec<u8>>` - 生日（可选）
+- `death_date: Option<Vec<u8>>` - 逝世日期（可选）
+- `description: Vec<u8>` - 纪念描述
+- `is_public: bool` - 是否公开访问
+- `avatar_ipfs: Option<Vec<u8>>` - 头像照片的 IPFS 哈希（可选）
 
-### 2. light_lamp - 点灯照路
-```rust
-pub fn light_lamp(
-    origin: OriginFor<T>, 
-    note: Vec<u8>, 
-    amount: Option<KarmaBalance>
-) -> DispatchResultWithPostInfo
-```
-- **功能**：点燃明灯，为逝者照亮归途，祈求其在另一世界得到光明
-- **默认成本**：`DefaultLampCost`
+**功能**：为逝者创建专属的链上祭念馆，支持设置头像照片
 
-### 3. offer_flower - 献花纪念
-```rust
-pub fn offer_flower(
-    origin: OriginFor<T>, 
-    note: Vec<u8>, 
-    amount: Option<KarmaBalance>
-) -> DispatchResultWithPostInfo
-```
-- **功能**：鲜花供养，以美好的花朵表达对逝者的怀念与敬意
-- **默认成本**：`DefaultFlowerCost`
+### 2. add_memorial_media
+为祭念馆添加媒体文件
 
-### 4. donate - 功德回向
-```rust
-pub fn donate(
-    origin: OriginFor<T>, 
-    note: Vec<u8>, 
-    amount: Option<KarmaBalance>
-) -> DispatchResultWithPostInfo
-```
-- **功能**：财物布施，将功德回向给逝者，愿其在来世得到庇佑
-- **默认成本**：`DefaultDonationCost`
+**参数**：
+- `memorial_id: u32` - 祭念馆ID
+- `files: Vec<IpfsFile>` - 要添加的 IPFS 文件列表
 
-### 5. custom - 自定义纪念仪式
-```rust
-pub fn custom(
-    origin: OriginFor<T>, 
-    code: u8, 
-    note: Vec<u8>, 
-    amount: KarmaBalance
-) -> DispatchResultWithPostInfo
-```
-- **功能**：自定义纪念仪式，扩展性支持特殊的纪念行为
-- **成本**：必须显式指定 `amount`
-- **限制**：`code > 0`
+**功能**：添加图片、音频、视频等媒体文件到祭念馆相册
 
-## 权重 (Weights)
+### 3. perform_traditional_ceremony
+进行传统祭奠活动（支持媒体附件）
 
-所有 extrinsics 当前使用固定权重 `10_000`：
+**参数**：
+- `memorial_id: u32` - 祭念馆ID
+- `ceremony: TraditionalCeremony` - 传统祭奠类型
+- `message: Vec<u8>` - 祭奠留言
+- `karma_amount: Option<KarmaBalance>` - 可选的自定义Karma消费量
+- `attached_files: Vec<IpfsFile>` - 附加的媒体文件
 
-```rust
-#[pallet::weight(10_000)]
-```
+**支持的传统祭奠类型**：
+- `OfferFlowers` - 献花（可附加花束照片）
+- `LightCandles` - 点烛（可附加烛光视频）
+- `BurnIncense` - 烧香（可附加祭香照片）
+- `OfferFood` - 供奉食物（可附加供品照片）
+- `BurnPaperMoney` - 烧纸钱（可附加祭祀照片）
+- `Kowtow` - 磕头拜祭（可附加祭拜视频）
 
-**注意**：生产环境建议通过 `frame-benchmarking` 进行基准测试以获得准确权重。
+### 4. perform_modern_ceremony
+进行现代纪念活动（支持媒体附件）
 
-## 运行时集成示例
+**参数**：
+- `memorial_id: u32` - 祭念馆ID
+- `ceremony: ModernCeremony` - 现代纪念类型
+- `message: Vec<u8>` - 纪念留言
+- `karma_amount: Option<KarmaBalance>` - 可选的自定义Karma消费量
+- `attached_files: Vec<IpfsFile>` - 附加的媒体文件
 
-```rust
-impl pallet_commemorate::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type DefaultIncenseCost = ConstU128<100>;      // 上香默认消费 100 Karma
-    type DefaultLampCost = ConstU128<150>;         // 点灯默认消费 150 Karma
-    type DefaultFlowerCost = ConstU128<80>;        // 供花默认消费 80 Karma
-    type DefaultDonationCost = ConstU128<200>;     // 布施默认消费 200 Karma
-}
+**支持的现代纪念类型**：
+- `OfferFlowers` - 献花（可附加鲜花照片）
+- `LightPrayerLamps` - 点祈福灯（可附加祈福视频）
+- `WriteMessage` - 写留言（可附加手写信件）
+- `PlayMusic` - 播放音乐（可附加音频文件）
+- `ShareMemories` - 分享回忆（可附加回忆照片/视频）
+- `OnlineMemorial` - 在线追思（可附加追思文档）
 
-construct_runtime!(
-    pub enum Runtime where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
-    {
-        System: frame_system,
-        Karma: pallet_karma,
-        Commemorate: pallet_commemorate,  // 添加 Commemorate Pallet
-    }
-);
-```
+## 前端集成示例
 
-## 前端调用示例 (TypeScript)
-
-```typescript
-import { ApiPromise } from '@polkadot/api';
-
-// 上香纪念
-async function performIncenseCommemoration(api: ApiPromise, keyring: any, note: string, customAmount?: number) {
-  const noteBytes = new TextEncoder().encode(note);
-  const amount = customAmount ? api.createType('Option<u128>', customAmount) : api.createType('Option<u128>', null);
+### IPFS 文件上传
+```javascript
+// 上传文件到 IPFS
+const uploadToIpfs = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
   
-  const tx = api.tx.commemorate.incense(noteBytes, amount);
-  const hash = await tx.signAndSend(keyring);
-  console.log('上香纪念交易哈希:', hash.toHex());
-}
-
-// 监听纪念祭祀事件
-async function listenCommemorativeEvents(api: ApiPromise) {
-  api.query.system.events((events: any) => {
-    events.forEach((record: any) => {
-      const { event } = record;
-      if (event.section === 'commemorate' && event.method === 'CommemorativeRitualPerformed') {
-        const [account, action, amount, note] = event.data;
-        console.log(`纪念记录: ${account} 执行 ${action} 消费 ${amount} Karma`);
-        console.log(`备注: ${new TextDecoder().decode(note)}`);
-      }
-    });
+  const response = await fetch('/api/ipfs/upload', {
+    method: 'POST',
+    body: formData
   });
-}
-
-// 批量纪念祭祀示例
-async function performMultipleCommemorativeRituals(api: ApiPromise, keyring: any) {
-  const txs = [
-    api.tx.commemorate.incense(new TextEncoder().encode('缅怀先人'), null),
-    api.tx.commemorate.lightLamp(new TextEncoder().encode('照亮归途'), null),
-    api.tx.commemorate.offerFlower(new TextEncoder().encode('献花纪念'), null),
-  ];
   
-  const batchTx = api.tx.utility.batch(txs);
-  await batchTx.signAndSend(keyring);
-}
+  const result = await response.json();
+  return {
+    hash: result.hash,
+    file_type: file.type,
+    size: file.size,
+    name: file.name
+  };
+};
+
+// 创建带头像的祭念馆
+const createMemorialWithAvatar = async (name, description, avatarFile) => {
+  let avatarIpfs = null;
+  
+  if (avatarFile) {
+    avatarIpfs = await uploadToIpfs(avatarFile);
+  }
+  
+  const tx = api.tx.commemorate.createMemorial(
+    name, null, null, description, true, avatarIpfs?.hash
+  );
+  return await tx.signAndSend(keyring);
+};
+
+// 进行带媒体附件的祭奠
+const ceremonyWithMedia = async (memorialId, ceremony, message, mediaFiles) => {
+  const attachedFiles = [];
+  
+  for (const file of mediaFiles) {
+    const ipfsFile = await uploadToIpfs(file);
+    attachedFiles.push(ipfsFile);
+  }
+  
+  const tx = api.tx.commemorate.performTraditionalCeremony(
+    memorialId, ceremony, message, null, attachedFiles
+  );
+  return await tx.signAndSend(keyring);
+};
+```
+
+### 媒体文件展示
+```javascript
+// 从 IPFS 获取文件 URL
+const getIpfsUrl = (hash) => {
+  return `https://ipfs.io/ipfs/${hash}`;
+};
+
+// 展示祭念馆相册
+const displayGallery = (memorial) => {
+  memorial.gallery_files.forEach(file => {
+    const url = getIpfsUrl(file.hash);
+    
+    if (file.file_type.startsWith('image/')) {
+      // 显示图片
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = file.name;
+    } else if (file.file_type.startsWith('audio/')) {
+      // 播放音频
+      const audio = document.createElement('audio');
+      audio.src = url;
+      audio.controls = true;
+    } else if (file.file_type.startsWith('video/')) {
+      // 播放视频
+      const video = document.createElement('video');
+      video.src = url;
+      video.controls = true;
+    }
+  });
+};
 ```
 
 ## 安全与隐私
 
-### 功德消费安全
-- **余额检查**：通过 `Karma Pallet` 自动验证 Karma 余额
-- **防重入**：无状态设计避免重入攻击
-- **错误处理**：Karma 消费失败时自动回滚
+### 访问控制
+- 祭念馆创建者拥有完全管理权限
+- 支持公开和私密两种访问模式
+- 私密祭念馆仅创建者和被授权用户可访问
 
-### 数据隐私
-- **备注内容**：存储在事件中，链上公开可见
-- **敏感信息**：避免在 `note` 参数中包含敏感个人信息
-- **数据最小化**：仅记录必要的纪念祭祀行为数据
+### IPFS 安全考虑
+- 文件哈希验证确保内容完整性
+- 支持多个 IPFS 网关提高可用性
+- 建议对敏感内容进行客户端加密
 
-## 序列图（简化）
+### Karma 防护
+- 所有操作都需要消耗 Karma，防止垃圾数据
+- 基于操作类型设置不同的 Karma 消费标准
+- 支持自定义 Karma 数量表达诚意程度
 
-```mermaid
-sequenceDiagram
-    participant User as 用户 (dApp)
-    participant Commemorate as Commemorate Pallet
-    participant Karma as Karma Pallet
-    participant Event as 链上事件
+## 性能优化
 
-    User->>Commemorate: incense(note, amount)
-    Commemorate->>Karma: consume_karma_for_merit(who, cost, MeritAction::Incense)
-    Karma-->>Commemorate: DispatchResult
-    alt 消费成功
-        Commemorate->>Event: CommemorativeRitualPerformed(who, Incense, cost, note)
-        Commemorate-->>User: Ok
-    else 消费失败
-        Commemorate-->>User: Error("ConsumeFailed")
-    end
-```
+### 存储优化
+- 使用 `BoundedVec` 限制存储大小
+- 大文件存储在 IPFS，链上仅存储元数据
+- 分层存储设计减少链上存储压力
 
-## 基准测试与权重模板 (frame-benchmarking)
+### 查询优化
+- 使用双重映射优化祭奠记录查询
+- 支持按时间、类型等维度筛选
+- 提供批量查询接口提升效率
 
-### 1. 添加 WeightInfo Trait
-
-在 `src/lib.rs` 中添加权重接口：
-
-```rust
-pub trait WeightInfo {
-    fn incense() -> Weight;
-    fn light_lamp() -> Weight;
-    fn offer_flower() -> Weight;
-    fn donate() -> Weight;
-    fn custom() -> Weight;
-}
-
-// 开发环境默认实现
-impl WeightInfo for () {
-    fn incense() -> Weight { Weight::from_parts(10_000, 0) }
-    fn light_lamp() -> Weight { Weight::from_parts(10_000, 0) }
-    fn offer_flower() -> Weight { Weight::from_parts(10_000, 0) }
-    fn donate() -> Weight { Weight::from_parts(10_000, 0) }
-    fn custom() -> Weight { Weight::from_parts(10_000, 0) }
-}
-```
-
-### 2. 基准测试文件模板
-
-创建 `src/benchmarking.rs`：
-
-```rust
-#![cfg(feature = "runtime-benchmarks")]
-
-use super::*;
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_system::RawOrigin;
-use sp_std::vec;
-
-benchmarks! {
-    incense_small_note {
-        let caller: T::AccountId = whitelisted_caller();
-        // 预设 Karma 余额
-        <pallet_karma::Pallet<T> as KarmaProvider<T::AccountId>>::reward_karma(
-            &caller, 1000u128.into(), pallet_karma::RewardReason::ManualAdjust
-        ).unwrap();
-        let note = vec![0u8; 32]; // 小备注
-    }: incense(RawOrigin::Signed(caller), note, None)
-
-    incense_large_note_with_amount {
-        let caller: T::AccountId = whitelisted_caller();
-        <pallet_karma::Pallet<T> as KarmaProvider<T::AccountId>>::reward_karma(
-            &caller, 1000u128.into(), pallet_karma::RewardReason::ManualAdjust
-        ).unwrap();
-        let note = vec![0u8; 256]; // 大备注
-        let amount = Some(200u128.into());
-    }: incense(RawOrigin::Signed(caller), note, amount)
-
-    custom_commemorative_ritual {
-        let caller: T::AccountId = whitelisted_caller();
-        <pallet_karma::Pallet<T> as KarmaProvider<T::AccountId>>::reward_karma(
-            &caller, 1000u128.into(), pallet_karma::RewardReason::ManualAdjust
-        ).unwrap();
-        let note = vec![0u8; 128];
-    }: custom(RawOrigin::Signed(caller), 42u8, note, 150u128.into())
-}
-
-impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext(), crate::mock::Test);
-```
-
-### 3. 生成权重文件 (Windows)
-
-```bash
-# 在项目根目录执行
-cargo build --release --features runtime-benchmarks
-.\target\release\buddhaland-node benchmark pallet ^
-    --chain dev ^
-    --pallet pallet_commemorate ^
-    --extrinsic "*" ^
-    --steps 50 ^
-    --repeat 20 ^
-    --output ./pallets/commemorate/src/weights.rs
-```
-
-### 4. Runtime 集成权重
-
-```rust
-impl pallet_commemorate::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type WeightInfo = pallet_commemorate::weights::SubstrateWeight<Runtime>; // 使用生成的权重
-    type DefaultIncenseCost = ConstU128<100>;
-    // ... 其他配置
-}
-```
-
-## 测试建议
-
-### 单元测试
-- 测试各纪念祭祀函数的 Karma 消费逻辑
-- 验证事件正确触发
-- 测试错误处理（Karma 不足、无效参数等）
-
-### 集成测试
-- 与 `Karma Pallet` 的集成测试
-- 批量纪念祭祀交易测试
-- 前端事件监听测试
-
-## 兼容性与扩展性
-
-### 向后兼容
-- 新增 `MeritAction` 变体时保持现有枚举值不变
-- 配置参数采用常量形式，便于 runtime 升级
-
-### 扩展方向
-- **季节性纪念**：根据传统节日添加特殊纪念行为
-- **集体纪念**：支持多用户协作的大型纪念活动
-- **NFT 集成**：将纪念行为与数字文物、纪念证书关联
-- **元宇宙应用**：与 WebGL 3D 场景联动的沉浸式纪念体验
-
----
-
-**开发者注意**：本 Pallet 设计遵循 Substrate 最佳实践，采用职责单一、依赖分离的架构。所有 Karma 相关逻辑委托给专门的 `Karma Pallet`，确保代码简洁、易维护。
+本模块将传统祭奠文化与区块链技术、分布式存储完美结合，为用户提供一个永久、安全、富媒体的数字纪念平台。

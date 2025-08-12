@@ -21,6 +21,18 @@ Share-Mining Pallet 实现链外内容分享挖矿激励机制：
 - `HttpTimeoutMillis`: HTTP 请求超时时间
 - `UnsignedPriority`: 无签名交易优先级
 
+## 功能特性 (Features)
+
+### 默认功能
+- `std`: 标准库支持，包含所有依赖项的 std feature
+
+### 可选功能
+- `runtime-benchmarks`: 性能基准测试支持
+  - 启用 frame-benchmarking 的 runtime-benchmarks feature
+  - 提供性能测试和权重校准功能
+  - 用于 Runtime 性能优化和权重计算
+- `try-runtime`: 运行时状态验证和调试支持
+
 ## 存储结构
 
 - `RoundId`: 当前轮次计数器
@@ -85,6 +97,21 @@ impl pallet_share_mining::Config for Runtime {
 }
 ```
 
+### Feature 配置
+
+在 `Cargo.toml` 中启用相应功能：
+
+```toml
+[dependencies]
+pallet-share-mining = { path = "../pallets/share-mining", default-features = false }
+
+[features]
+runtime-benchmarks = [
+    "pallet-share-mining/runtime-benchmarks",
+    # ... 其他 pallet 的 runtime-benchmarks
+]
+```
+
 ## 总结
 
-Share-Mining Pallet 通过链外内容验证和链上奖励分配的结合，为佛境生态提供了去中心化的用户参与激励机制，推动了佛境相关内容的传播与社区建设。
+Share-Mining Pallet 通过链外内容验证和链上奖励分配的结合，为佛境生态提供了去中心化的用户参与激励机制，推动了佛境相关内容的传播与社区建设。新增的 runtime-benchmarks 功能支持为性能优化和权重校准提供了技术基础。

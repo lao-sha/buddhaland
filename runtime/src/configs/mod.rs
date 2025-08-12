@@ -262,20 +262,38 @@ impl pallet_paymaster::Config for Runtime {
     type WeightInfo = ();
 }
 
-// 为 Commemorate Pallet 提供运行时配置
+// Commemorate Pallet 配置常量
 parameter_types! {
-    pub const DefaultIncenseCost: u128 = 10;    // 上香默认消耗
-    pub const DefaultLampCost: u128 = 20;       // 点灯默认消耗
-    pub const DefaultFlowerCost: u128 = 30;     // 供花默认消耗
-    pub const DefaultDonationCost: u128 = 50;   // 布施默认消耗
+    pub const MaxNameLength: u32 = 100;                  // 逝者姓名最大长度
+    pub const MaxDescriptionLength: u32 = 1000;          // 描述信息最大长度
+    pub const MaxMessageLength: u32 = 500;               // 留言最大长度
+    pub const MaxMemorialsPerAccount: u32 = 50;          // 每个账户最多创建50个祭念馆
+    pub const CreateMemorialCost: u128 = 100;            // 创建祭念馆消耗100 Karma
+    pub const BaseTraditionalCost: u128 = 20;            // 传统祭奠基础费用20 Karma
+    pub const BaseModernCost: u128 = 15;                 // 现代纪念基础费用15 Karma
+    
+    // IPFS 相关配置
+    pub const MaxIpfsHashLength: u32 = 64;               // IPFS 哈希最大长度（支持CIDv0和CIDv1）
+    pub const MaxFileNameLength: u32 = 256;              // 文件名最大长度
+    pub const MaxFilesPerMemorial: u32 = 100;            // 每个祭念馆最大文件数量
+    pub const MaxFilesPerCeremony: u32 = 10;             // 每次祭奠最大附件数量
 }
 
 impl pallet_commemorate::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type DefaultIncenseCost = DefaultIncenseCost;
-    type DefaultLampCost = DefaultLampCost;
-    type DefaultFlowerCost = DefaultFlowerCost;
-    type DefaultDonationCost = DefaultDonationCost;
+    type MaxNameLength = MaxNameLength;
+    type MaxDescriptionLength = MaxDescriptionLength;
+    type MaxMessageLength = MaxMessageLength;
+    type MaxMemorialsPerAccount = MaxMemorialsPerAccount;
+    type CreateMemorialCost = CreateMemorialCost;
+    type BaseTraditionalCost = BaseTraditionalCost;
+    type BaseModernCost = BaseModernCost;
+    
+    // IPFS 相关配置
+    type MaxIpfsHashLength = MaxIpfsHashLength;
+    type MaxFileNameLength = MaxFileNameLength;
+    type MaxFilesPerMemorial = MaxFilesPerMemorial;
+    type MaxFilesPerCeremony = MaxFilesPerCeremony;
 }
 
 // Meditation Pallet 配置常量
