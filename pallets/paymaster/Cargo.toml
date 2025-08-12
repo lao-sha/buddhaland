@@ -5,7 +5,7 @@ edition = "2021"
 license = "Apache-2.0"
 publish = false
 authors = ["BuddhaLand"]
-description = "Paymaster pallet for paying gas fees using BUD from Karma exchange"
+description = "Paymaster pallet for paying gas fees using BUD from various sources"
 
 [lib]
 name = "pallet_paymaster"
@@ -23,7 +23,6 @@ std = [
     "frame-system/std",
     "pallet-balances/std",
     "pallet-karma/std",
-    "pallet-exchange/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
@@ -31,14 +30,12 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
     "pallet-karma/runtime-benchmarks",
-    "pallet-exchange/runtime-benchmarks",
 ]
 try-runtime = [
     "frame-support/try-runtime",
     "frame-system/try-runtime",
     "pallet-balances/try-runtime",
     "pallet-karma/try-runtime",
-    "pallet-exchange/try-runtime",
 ]
 
 [dependencies]
@@ -49,8 +46,6 @@ sp-runtime = { workspace = true, default-features = false }
 frame-support = { workspace = true, default-features = false }
 frame-system = { workspace = true, default-features = false }
 frame-benchmarking = { workspace = true, optional = true, default-features = false }
-
 # Pallet dependencies
 pallet-balances = { workspace = true, default-features = false }
 pallet-karma = { path = "../karma", default-features = false }
-pallet-exchange = { path = "../exchange", default-features = false }

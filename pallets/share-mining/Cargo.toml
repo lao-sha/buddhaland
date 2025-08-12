@@ -13,19 +13,19 @@ codec = { package = "parity-scale-codec", version = "3", default-features = fals
 scale-info = { version = "2", default-features = false, features = ["derive"] }
 
 sp-std = { version = "11", default-features = false }
-sp-runtime = { version = "39", default-features = false, features = ["serde"] }
-sp-io = { version = "39", default-features = false }
+sp-runtime = { workspace = true, default-features = false, features = ["serde"] }
+sp-io = { workspace = true, default-features = false }
 
-frame-support = { version = "39", default-features = false, features = ["experimental"] }
-frame-system = { version = "39", default-features = false }
-frame-benchmarking = { version = "39", default-features = false, optional = true }
+frame-support = { workspace = true, default-features = false, features = ["experimental"] }
+frame-system = { workspace = true, default-features = false }
+frame-benchmarking = { workspace = true, default-features = false, optional = true }
 
 # 可选：用于 offchain http
-sp-core = { version = "39", default-features = false }
+sp-core = { workspace = true, default-features = false }
 
 [dev-dependencies]
-sp-core = { version = "39" }
-sp-runtime = { version = "39" }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
 
 [features]
 default = ["std"]

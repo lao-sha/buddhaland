@@ -6223,6 +6223,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-commemorate"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking 40.0.0",
+ "frame-support 40.1.0",
+ "frame-system 40.1.0",
+ "pallet-karma",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core 36.1.0",
+ "sp-io 40.0.1",
+ "sp-runtime 41.1.0",
+ "sp-std 11.0.0",
+]
+
+[[package]]
 name = "pallet-exchange"
 version = "0.1.0"
 dependencies = [
@@ -6231,6 +6247,8 @@ dependencies = [
  "frame-system 40.1.0",
  "pallet-balances",
  "pallet-karma",
+ "pallet-paymaster",
+ "pallet-share-mining",
  "parity-scale-codec",
  "scale-info",
  "sp-core 36.1.0",
@@ -6299,7 +6317,6 @@ dependencies = [
  "frame-support 40.1.0",
  "frame-system 40.1.0",
  "pallet-balances",
- "pallet-exchange",
  "pallet-karma",
  "parity-scale-codec",
  "scale-info",
@@ -6324,13 +6341,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-ritual"
+name = "pallet-reward"
 version = "0.1.0"
 dependencies = [
  "frame-benchmarking 40.0.0",
  "frame-support 40.1.0",
  "frame-system 40.1.0",
  "pallet-karma",
+ "pallet-meditation",
  "parity-scale-codec",
  "scale-info",
  "sp-core 36.1.0",
@@ -6359,6 +6377,21 @@ dependencies = [
  "sp-staking 38.0.0",
  "sp-state-machine 0.45.0",
  "sp-trie 39.1.0",
+]
+
+[[package]]
+name = "pallet-share-mining"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking 40.0.0",
+ "frame-support 40.1.0",
+ "frame-system 40.1.0",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core 36.1.0",
+ "sp-io 40.0.1",
+ "sp-runtime 41.1.0",
+ "sp-std 11.0.0",
 ]
 
 [[package]]
@@ -10027,13 +10060,14 @@ dependencies = [
  "frame-try-runtime",
  "pallet-aura",
  "pallet-balances",
+ "pallet-commemorate",
  "pallet-exchange",
  "pallet-grandpa",
  "pallet-karma",
  "pallet-meditation",
  "pallet-paymaster",
  "pallet-prayer",
- "pallet-ritual",
+ "pallet-share-mining",
  "pallet-sudo",
  "pallet-template",
  "pallet-timestamp 39.0.0",

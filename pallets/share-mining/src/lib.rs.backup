@@ -333,18 +333,17 @@ pub mod pallet {
             }
         }
     }
+}
 
-    // 添加公开模块函数供其他 pallet 直接调用
-    impl<T: Config> Pallet<T> {
-        /// 获取奖金池账户ID - 供其他 pallet 获取转账目标
-        pub fn pot_account() -> T::AccountId {
-            T::PotAccount::get()
-        }
 
-        /// 获取奖金池当前余额
-        pub fn pot_balance() -> BalanceOf<T> {
-            let pot = T::PotAccount::get();
-            T::Currency::free_balance(&pot)
-        }
+    /// 获取奖金池账户ID - 供其他 pallet 获取转账目标
+    pub fn pot_account() -> T::AccountId {
+        T::PotAccount::get()
+    }
+
+    /// 获取奖金池当前余额
+    pub fn pot_balance() -> BalanceOf<T> {
+        let pot = T::PotAccount::get();
+        T::Currency::free_balance(&pot)
     }
 }
