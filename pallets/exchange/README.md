@@ -1,6 +1,6 @@
 # Exchange Pallet
 
-BUD代币兑换Karma（福缘值）的pallet。实现单向兑换机制，并将兑换的BUD按比例分配到三个目标。
+BUD代币兑换Karma（福缘值）的pallet。实现单向兑换机制，并将兑换的BUD按比例分配到四个目标。
 
 ## 功能概述
 
@@ -8,6 +8,9 @@ Exchange Pallet专门处理BUD代币到Karma的单向兑换，支持将收到的
 - 一部分销毁（黑洞）
 - 一部分进入国库
 - 一部分进入paymaster用于支付用户gas费
+- 一部分进入share-mining奖金池用于支付share-mining奖励
+
+
 
 ## 核心功能特性
 
@@ -17,17 +20,22 @@ Exchange Pallet专门处理BUD代币到Karma的单向兑换，支持将收到的
 - **可配置比例**: 兑换比例通过runtime配置项设定
 
 ### 2. BUD分配机制
-兑换得到的BUD将按比例分配到三个目标：
-- **黑洞 (Burn)**: 永久销毁，减少代币流通量（默认20%）
-- **国库 (Treasury)**: 用于生态发展和治理（默认70%）
-- **Paymaster**: 用于代付用户交易费用（默认10%）
+兑换得到的BUD将按比例分配到四个目标：
+- **黑洞 (Burn)**: 永久销毁，减少代币流通量
+- **国库 (Treasury)**: 用于生态发展和治理
+- **Paymaster**: 用于代付用户交易费用
+- **Share-Mining 奖金池**: 用于支付 share-mining 激励
+
+
 
 ### 3. 配置参数
 - `ExchangeRate`: 兑换比例（1 BUD = X Karma）
 - `BurnBps`: 黑洞分配比例（基点制，10000=100%）
 - `TreasuryBps`: 国库分配比例
 - `PaymasterBps`: Paymaster分配比例
-- 账户配置：`BlackholeAccount`, `TreasuryAccount`, `PaymasterAccount`
+- `ShareMiningBps`: Share-Mining 奖金池分配比例
+- 账户配置：`BlackholeAccount`, `TreasuryAccount`, `PaymasterAccount`, `ShareMiningAccount`
+- `BpsDenominator`: 基点分母（通常10000），需满足 BurnBps + TreasuryBps + PaymasterBps + ShareMiningBps = BpsDenominator
 
 ## 设计原则
 
@@ -54,8 +62,8 @@ Exchange Pallet专门处理BUD代币到Karma的单向兑换，支持将收到的
 ## 事件
 
 ```rust
-/// 成功兑换Karma [用户, bud_in, karma_out, burn, treasury, paymaster]
-Exchanged(AccountId, u128, KarmaBalance, u128, u128, u128)
+/// 成功兑换Karma [用户, bud_in, karma_out, burn, treasury, paymaster, share_mining]
+Exchanged(AccountId, u128, KarmaBalance, u128, u128, u128, u128)
 ```
 
 ## 错误类型
@@ -83,9 +91,9 @@ pub enum Error<T> {
 
 **逻辑**:
 1. 验证输入金额 > 0
-2. 验证分配比例配置正确
-3. 计算三个目标的分配金额
-4. 依次转账到黑洞、国库、paymaster
+2. 验证分配比例配置正确（校验四个BPS之和等于分母）
+3. 计算四个目标的分配金额（黑洞、国库、Paymaster、Share-Mining 奖金池）
+4. 依次转账到黑洞、国库、paymaster、share-mining
 5. 给用户发放对应数量的Karma
 6. 发出Exchanged事件
 
@@ -95,6 +103,7 @@ pub enum Error<T> {
 - **pallet-balances**: 处理BUD代币转账
 - **pallet-karma**: 发放Karma福缘值
 - **pallet-paymaster**: 接收BUD用于代付gas费
+- （可选）**Share-Mining 奖金池账户**：作为收款账户由 runtime 配置提供（可为固定账户或由相关模块维护）
 
 ### 配置示例
 
@@ -105,10 +114,12 @@ impl pallet_exchange::Config for Runtime {
     type PaymasterAccount = PaymasterAccountId;
     type BlackholeAccount = BlackholeAccountId; 
     type TreasuryAccount = TreasuryAccountId;
+    type ShareMiningAccount = ShareMiningAccountId;
     type ExchangeRate = ConstU128<1000>; // 1 BUD = 1000 Karma
-    type BurnBps = ConstU32<2000>;       // 20%
-    type TreasuryBps = ConstU32<7000>;   // 70%
-    type PaymasterBps = ConstU32<1000>;  // 10%
+    type BurnBps = ConstU32<2000>;         // 20%
+    type TreasuryBps = ConstU32<6800>;     // 68%
+    type PaymasterBps = ConstU32<1000>;    // 10%
+    type ShareMiningBps = ConstU32<200>;   // 2%
     type BpsDenominator = ConstU32<10000>; // 10000基点 = 100%
 }
 ```
@@ -126,10 +137,11 @@ impl pallet_exchange::Config for Runtime {
 - **账户安全**: 黑洞账户应该是不可控制的销毁地址
 - **权限控制**: 只有用户自己可以发起兑换
 - **余额保护**: 防止恶意消耗用户余额
+- **比例验证**: 确保四个分配比例之和等于分母，避免溢出与资金错配
 
 ## 测试建议
 
-1. **单元测试**: 测试各种兑换金额和分配计算
+1. **单元测试**: 测试各种兑换金额和分配计算（包含 share-mining 分配）
 2. **集成测试**: 测试与karma和balances pallet的交互
 3. **边界测试**: 测试零金额、最大金额等边界情况
-4. **错误测试**: 测试各种错误场景的处理
+4. **错误测试**: 测试各种错误场景的处理（包括比例配置不合法时的回滚）
