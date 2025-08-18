@@ -22,6 +22,7 @@ use sp_version::RuntimeVersion;
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
+pub use pallet_forwarder::Call as ForwarderCall;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
@@ -199,6 +200,7 @@ mod runtime {
 		RuntimeTask,
 		RuntimeViewFunction
 	)]
+	#[derive(Default)]
 	pub struct Runtime;
 
 	#[runtime::pallet_index(0)]
@@ -225,4 +227,43 @@ mod runtime {
 	// Include the custom logic from the pallet-template in the runtime.
 	#[runtime::pallet_index(7)]
 	pub type Template = pallet_template;
+
+	#[runtime::pallet_index(8)]
+	pub type Karma = pallet_karma;
+
+	#[runtime::pallet_index(9)]
+	pub type Authorizer = pallet_authorizer;
+
+	#[runtime::pallet_index(10)]
+	pub type Forwarder = pallet_forwarder;
+
+	#[runtime::pallet_index(11)]
+	pub type Device = pallet_device;
+
+	#[runtime::pallet_index(12)]
+	pub type Mining = pallet_mining;
+
+	#[runtime::pallet_index(13)]
+	pub type Meditation = pallet_meditation;
+
+	#[runtime::pallet_index(14)]
+	pub type Temple = pallet_temple;
+
+	#[runtime::pallet_index(15)]
+	pub type Agent = pallet_agent;
+
+	#[runtime::pallet_index(16)]
+	pub type Order = pallet_order;
+
+	#[runtime::pallet_index(17)]
+	pub type OtcMarket = pallet_otc_market;
+
+	#[runtime::pallet_index(18)]
+	pub type Escrow = pallet_escrow;
+
+	#[runtime::pallet_index(19)]
+	pub type Arbitration = pallet_arbitration;
+
+	#[runtime::pallet_index(20)]
+	pub type Exchange = pallet_exchange;
 }

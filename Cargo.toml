@@ -9,6 +9,19 @@ edition = "2021"
 members = [
     "node",
     "pallets/template",
+    "pallets/karma",
+    "pallets/authorizer",
+    "pallets/forwarder",
+    "pallets/device",
+    "pallets/mining",
+    "pallets/meditation",
+    "pallets/temple",
+    "pallets/agent",
+    "pallets/order",
+    "pallets/otc-market",
+    "pallets/escrow",
+    "pallets/arbitration",
+    "pallets/exchange",
     "runtime",
 ]
 resolver = "2"
@@ -47,7 +60,9 @@ sp-inherents = { version = "36.0.0", default-features = false }
 sp-io = { version = "40.0.1", default-features = false }
 sp-keyring = { version = "41.0.0", default-features = false }
 sp-runtime = { version = "41.1.0", default-features = false }
+sp-arithmetic = { version = "26.1.0", default-features = false }
 sp-timestamp = { version = "36.0.0", default-features = false }
+sp-std = { version = "12.0.0", default-features = false }
 substrate-frame-rpc-system = { version = "43.0.0", default-features = false }
 substrate-build-script-utils = { version = "11.0.0", default-features = false }
 codec = { version = "3.7.4", default-features = false, package = "parity-scale-codec" }

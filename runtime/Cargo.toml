@@ -25,6 +25,19 @@ frame-try-runtime = { optional = true, workspace = true }
 pallet-aura.workspace = true
 pallet-balances.workspace = true
 pallet-grandpa.workspace = true
+pallet-karma = { path = "../pallets/karma", default-features = false }
+pallet-authorizer = { path = "../pallets/authorizer", default-features = false }
+pallet-forwarder = { path = "../pallets/forwarder", default-features = false }
+pallet-device = { path = "../pallets/device", default-features = false }
+pallet-mining = { path = "../pallets/mining", default-features = false }
+pallet-meditation = { path = "../pallets/meditation", default-features = false }
+pallet-temple = { path = "../pallets/temple", default-features = false }
+pallet-agent = { path = "../pallets/agent", default-features = false }
+pallet-order = { path = "../pallets/order", default-features = false }
+pallet-otc-market = { path = "../pallets/otc-market", default-features = false }
+pallet-escrow = { path = "../pallets/escrow", default-features = false }
+pallet-arbitration = { path = "../pallets/arbitration", default-features = false }
+pallet-exchange = { path = "../pallets/exchange", default-features = false }
 pallet-sudo.workspace = true
 pallet-template.workspace = true
 pallet-timestamp.workspace = true
@@ -65,6 +78,19 @@ std = [
 	"pallet-aura/std",
 	"pallet-balances/std",
 	"pallet-grandpa/std",
+	"pallet-karma/std",
+	"pallet-authorizer/std",
+	"pallet-forwarder/std",
+	"pallet-device/std",
+	"pallet-mining/std",
+	"pallet-meditation/std",
+	"pallet-temple/std",
+	"pallet-agent/std",
+	"pallet-order/std",
+	"pallet-otc-market/std",
+	"pallet-escrow/std",
+	"pallet-arbitration/std",
+	"pallet-exchange/std",
 	"pallet-sudo/std",
 	"pallet-template/std",
 	"pallet-timestamp/std",

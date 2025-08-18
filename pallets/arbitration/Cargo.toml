@@ -1,0 +1,36 @@
+[package]
+name = "pallet-arbitration"
+version = "0.1.0"
+license = "MIT-0"
+edition.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+codec = { workspace = true, features = ["derive"] }
+scale-info = { workspace = true, features = ["derive"], default-features = false }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+sp-runtime = { workspace = true }
+sp-core = { workspace = true }
+sp-arithmetic = { workspace = true }
+pallet-escrow = { path = "../escrow", default-features = false }
+pallet-order = { path = "../order", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "scale-info/std",
+    "frame-support/std",
+    "frame-system/std",
+    "sp-runtime/std",
+    "sp-core/std",
+    "sp-arithmetic/std",
+    "pallet-escrow/std",
+    "pallet-order/std",
+]
+
+

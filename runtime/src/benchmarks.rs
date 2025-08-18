@@ -31,4 +31,7 @@ frame_benchmarking::define_benchmarks!(
 	[pallet_timestamp, Timestamp]
 	[pallet_sudo, Sudo]
 	[pallet_template, Template]
+	[pallet_order, Order]
+	[pallet_otc_market, OtcMarket]
+	[pallet_arbitration, Arbitration]
 );

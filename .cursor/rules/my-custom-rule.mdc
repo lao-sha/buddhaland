@@ -1,0 +1,10 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+1、所有修改、增加的代码都用函数级详细中文注释
+2、设计pallet之间要最低的耦合度
+3、修改pallet代码后，相应的也要修改对应pallet的readme.md
+

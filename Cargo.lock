@@ -2938,7 +2938,7 @@ dependencies = [
  "sp-runtime",
  "sp-staking",
  "sp-state-machine",
- "sp-std",
+ "sp-std 14.0.0",
  "sp-tracing",
  "sp-trie",
  "sp-weights",
@@ -5835,6 +5835,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 
 [[package]]
+name = "pallet-agent"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-arbitration"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-escrow",
+ "pallet-order",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-aura"
 version = "39.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5848,6 +5875,17 @@ dependencies = [
  "scale-info",
  "sp-application-crypto",
  "sp-consensus-aura",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-authorizer"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
  "sp-runtime",
 ]
 
@@ -5883,6 +5921,55 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-device"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-escrow"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-exchange"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-authorizer",
+ "pallet-karma",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-forwarder"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-grandpa"
 version = "40.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5903,6 +5990,76 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-staking",
+]
+
+[[package]]
+name = "pallet-karma"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-authorizer",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-meditation"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-authorizer",
+ "pallet-device",
+ "pallet-mining",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-mining"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-authorizer",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-order"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-escrow",
+ "pallet-karma",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-runtime",
+ "sp-std 12.0.0",
+]
+
+[[package]]
+name = "pallet-otc-market"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-escrow",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "sp-std 12.0.0",
 ]
 
 [[package]]
@@ -5954,6 +6111,18 @@ dependencies = [
  "scale-info",
  "sp-core",
  "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-temple"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
  "sp-runtime",
 ]
 
@@ -6500,7 +6669,7 @@ dependencies = [
  "sp-keystore",
  "sp-runtime",
  "sp-staking",
- "sp-std",
+ "sp-std 14.0.0",
  "thiserror 1.0.69",
 ]
 
@@ -9468,11 +9637,24 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "pallet-agent",
+ "pallet-arbitration",
  "pallet-aura",
+ "pallet-authorizer",
  "pallet-balances",
+ "pallet-device",
+ "pallet-escrow",
+ "pallet-exchange",
+ "pallet-forwarder",
  "pallet-grandpa",
+ "pallet-karma",
+ "pallet-meditation",
+ "pallet-mining",
+ "pallet-order",
+ "pallet-otc-market",
  "pallet-sudo",
  "pallet-template",
+ "pallet-temple",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
@@ -9725,7 +9907,7 @@ dependencies = [
  "sp-debug-derive",
  "sp-externalities",
  "sp-runtime-interface",
- "sp-std",
+ "sp-std 14.0.0",
  "sp-storage",
  "ss58-registry",
  "substrate-bip39",
@@ -9957,7 +10139,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-core",
  "sp-io",
- "sp-std",
+ "sp-std 14.0.0",
  "sp-trie",
  "sp-weights",
  "tracing",
@@ -9977,7 +10159,7 @@ dependencies = [
  "primitive-types",
  "sp-externalities",
  "sp-runtime-interface-proc-macro",
- "sp-std",
+ "sp-std 14.0.0",
  "sp-storage",
  "sp-tracing",
  "sp-wasm-interface",
@@ -10072,6 +10254,12 @@ dependencies = [
  "thiserror 1.0.69",
  "x25519-dalek",
 ]
+
+[[package]]
+name = "sp-std"
+version = "12.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54c78c5a66682568cc7b153603c5d01a2cc8f5c221c7b1e921517a0eef18ae05"
 
 [[package]]
 name = "sp-std"
@@ -10178,7 +10366,7 @@ dependencies = [
  "serde",
  "sp-crypto-hashing-proc-macro",
  "sp-runtime",
- "sp-std",
+ "sp-std 14.0.0",
  "sp-version-proc-macro",
  "thiserror 1.0.69",
 ]
