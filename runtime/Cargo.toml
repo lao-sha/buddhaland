@@ -38,6 +38,9 @@ pallet-otc-market = { path = "../pallets/otc-market", default-features = false }
 pallet-escrow = { path = "../pallets/escrow", default-features = false }
 pallet-arbitration = { path = "../pallets/arbitration", default-features = false }
 pallet-exchange = { path = "../pallets/exchange", default-features = false }
+pallet-ritual = { path = "../pallets/ritual", default-features = false }
+pallet-cemetery = { path = "../pallets/cemetery", default-features = false }
+pallet-deceased = { path = "../pallets/deceased", default-features = false }
 pallet-sudo.workspace = true
 pallet-template.workspace = true
 pallet-timestamp.workspace = true
@@ -91,6 +94,9 @@ std = [
 	"pallet-escrow/std",
 	"pallet-arbitration/std",
 	"pallet-exchange/std",
+	"pallet-ritual/std",
+	"pallet-cemetery/std",
+	"pallet-deceased/std",
 	"pallet-sudo/std",
 	"pallet-template/std",
 	"pallet-timestamp/std",

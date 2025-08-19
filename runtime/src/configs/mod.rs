@@ -33,6 +33,7 @@ use frame_support::{
 	},
 };
 use frame_system::limits::{BlockLength, BlockWeights};
+use alloc::vec::Vec; // 为 KarmaMintAdapter::gain 的 memo Vec 引入作用域
 use pallet_transaction_payment::{ConstFeeMultiplier, FungibleAdapter, Multiplier};
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime::{traits::One, Perbill};
@@ -374,6 +375,61 @@ impl pallet_agent::Config for Runtime {
     type MaxCalendar = AgentMaxCalendar;
 }
 
+// ===== ritual/cemetery/deceased 运行时参数占位（可按需调整） =====
+parameter_types! {
+    pub const RitualNsBytes: [u8; 8] = *b"ritual__";
+    pub const RitualMaxSpecs: u32 = 1024;
+    pub const RitualMaxSpecsPerKind: u32 = 128;
+    pub const RitualMaxSpecsPerProvider: u32 = 128;
+    pub const RitualMaxMemoLen: u32 = 128;
+    pub const RitualMaxCidLen: u32 = 64;
+    pub const RitualMaxBatchOffers: u32 = 16;
+    pub const RitualDefaultCooldown: u32 = 0;
+    pub const RitualDefaultBurnout: u32 = 0;
+}
+
+impl pallet_ritual::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type RitualNsBytes = RitualNsBytes;
+    type MaxSpecs = RitualMaxSpecs;
+    type MaxSpecsPerKind = RitualMaxSpecsPerKind;
+    type MaxSpecsPerProvider = RitualMaxSpecsPerProvider;
+    type MaxMemoLen = RitualMaxMemoLen;
+    type MaxCidLen = RitualMaxCidLen;
+    type MaxBatchOffers = RitualMaxBatchOffers;
+    type DefaultCooldownBlocks = RitualDefaultCooldown;
+    type DefaultBurnoutBlocks = RitualDefaultBurnout;
+    type TargetControl = ();
+    type OnOfferingCommitted = ();
+}
+
+parameter_types! {
+    pub const CemeteryMaxCidLen: u32 = 64;
+    pub const CemeteryMaxPlotsPerCemetery: u32 = 4096;
+    pub const CemeteryMaxOccupantsPerPlot: u32 = 16;
+    pub const CemeteryMaxMemoLen: u32 = 64;
+}
+impl pallet_cemetery::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MaxCidLen = CemeteryMaxCidLen;
+    type MaxPlotsPerCemetery = CemeteryMaxPlotsPerCemetery;
+    type MaxOccupantsPerPlot = CemeteryMaxOccupantsPerPlot;
+    type MaxMemoLen = CemeteryMaxMemoLen;
+    type OnIntermentCommitted = ();
+}
+
+parameter_types! {
+    pub const DeceasedMaxCidLen: u32 = 64;
+    pub const DeceasedMaxEditors: u32 = 8;
+    pub const DeceasedMaxRelations: u32 = 16;
+}
+impl pallet_deceased::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MaxCidLen = DeceasedMaxCidLen;
+    type MaxEditors = DeceasedMaxEditors;
+    type MaxRelationsPerNode = DeceasedMaxRelations;
+}
+
 parameter_types! {
     pub const OrderConfirmTTL: BlockNumber = 2 * DAYS; // 两天确认期
     pub const OrderMaxCidLen: u32 = 64;
@@ -393,11 +449,20 @@ impl pallet_order::Config for Runtime {
     type MaxVid = OrderMaxVid;
     type Escrow = pallet_escrow::Pallet<Runtime>;
     // 函数级中文注释：
-    // 将订单中的 Karma 适配器绑定到 `pallet-karma` Pallet，以实现买家确认完成后的 1:1 增发。
-    // 由于 `pallet_karma::Pallet<Runtime>` 实现了 `KarmaCurrency<AccountId>` 接口，
-    // 这里直接进行类型绑定即可，无需引入对方的 Config 约束，保持低耦合。
-    type Karma = pallet_karma::Pallet<Runtime>;
+    // 通过本地适配 Trait（`KarmaMint`）为订单绑定 Karma 增发实现。
+    // 这里将其桥接到 `pallet_karma::Pallet<Runtime>` 的 `gain` 方法。
+    type Karma = KarmaMintAdapter;
     type WeightInfo = pallet_order::weights::SubstrateWeight<Runtime>;
+}
+
+// ==== Karma 适配器：桥接 pallet_karma 到 pallet_order 的本地 Trait ====
+pub struct KarmaMintAdapter;
+impl pallet_order::pallet::KarmaMint<AccountId> for KarmaMintAdapter {
+    type Balance = Balance;
+    fn gain(origin_caller: &AccountId, who: &AccountId, amount: Self::Balance, memo: Vec<u8>) -> frame_support::dispatch::DispatchResult {
+        // 直接复用 Karma Pallet 的对外安全接口（含白名单校验与历史记录）
+        <pallet_karma::Pallet<Runtime> as pallet_karma::pallet::KarmaCurrency<AccountId>>::gain(origin_caller, who, amount, memo)
+    }
 }
 
 // 托管 PalletId 与平台账户占位（示例）

@@ -21,3 +21,4 @@
 ## 集成与白名单
 - 在 `runtime/src/configs/mod.rs` 的 `AuthorizerAdapter::is_call_allowed` 匹配允许代付的 RuntimeCall 变体（按命名空间）。
 - Exchange 的 `exchange` 未纳入白名单，必须用户自行签名与付费。
+- 仲裁 `dispute/arbitrate` 可纳入特定域的白名单，由 `pallet-authorizer` 管控仲裁方/路由权限。

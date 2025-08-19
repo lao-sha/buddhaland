@@ -46,7 +46,7 @@
 
 ## 与其它 Pallet 的关系
 - `pallet-order`：读取 `Temple/Service` 元数据，作为下单时的校验依据与目录来源。
-- `pallet-agent`：可结合寺庙服务目录做资质匹配（建议通过适配器 trait 解耦）。
+- `pallet-agent`：可结合寺庙服务目录做资质匹配（建议通过适配器 trait 解耦）。代办项目必须显式指向 `(temple_id, service_id)`，服务名以本 Pallet 为唯一事实源。
 - `pallet-authorizer`：可用于限制谁可注册寺庙/维护目录（通过命名空间白名单）。
 
 ## 安全与设计原则

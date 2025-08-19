@@ -30,6 +30,15 @@ pub mod pallet {
         fn arbitrate_partial(id: u64, bps: u16) -> DispatchResult;
     }
 
+    /// Karma 增发适配接口（低耦合）：由 Runtime 将其实现桥接到具体的 `pallet-karma`。
+    /// 函数级详细中文注释：
+    /// - 为避免在本 Pallet 中直接依赖 `pallet_karma`，我们仅声明所需最小接口。
+    /// - Runtime 侧通过 `impl KarmaMint for pallet_karma::Pallet<Runtime>` 完成桥接调用。
+    pub trait KarmaMint<AccountId> {
+        type Balance;
+        fn gain(origin_caller: &AccountId, who: &AccountId, amount: Self::Balance, memo: Vec<u8>) -> DispatchResult;
+    }
+
     #[derive(Encode, Decode, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
     pub enum OrderStatus { Created, Paid, Assigned, InProgress, Submitted, Disputed, Released, Refunded, Closed }
 
@@ -66,13 +75,11 @@ pub mod pallet {
         type MaxVid: Get<u32>;
         /// 托管接口（对接 pallet-escrow）
         type Escrow: pallet_escrow::pallet::Escrow<Self::AccountId, BalanceOf<Self>>;
-        /// Karma 适配器：低耦合增发接口，由 Runtime 绑定到 `pallet_karma::Pallet<Runtime>`
+        /// Karma 适配器：低耦合增发接口，由 Runtime 绑定到实际实现（例如 `pallet_karma::Pallet<Runtime>`）
         /// 函数级详细中文注释：
-        /// - 该关联类型要求实现 `pallet_karma::pallet::KarmaCurrency` Trait，用于为账户增发 Karma。
-        /// - 之所以不直接依赖 `pallet_karma::Config`，是为了在 Runtime 层通过适配器解耦，便于未来替换实现。
-        /// - 在订单买家确认完成后，会以“平台账户/模块账户”为调用者身份调用 `Karma::gain`，
-        ///   为买家增发与订单金额等额的 Karma，达到 1:1 的奖励效果。
-        type Karma: pallet_karma::pallet::KarmaCurrency<Self::AccountId, Balance = BalanceOf<Self>>;
+        /// - 通过本地 `KarmaMint` Trait 解耦，避免本 Pallet 对具体 Karma 实现产生编译期依赖。
+        /// - 订单买家确认完成后，将调用 `Karma::gain` 为买家增发与订单金额等额（1:1）的 Karma。
+        type Karma: KarmaMint<Self::AccountId, Balance = BalanceOf<Self>>;
         /// 权重信息
         type WeightInfo: weights::WeightInfo;
     }

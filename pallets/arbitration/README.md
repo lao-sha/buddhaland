@@ -22,9 +22,11 @@
 
 ## 集成
 - 订单域：Router 将裁决映射到 `pallet-order` 的 `ArbitrationOrderHook`，调用 `Escrow` 实施资金流。
+ - OTC 域（可扩展）：相同模式路由到 OTC 市场的裁决 Hook。
 
 ## 权重
 - 已接入基准框架，运行后替换为 `weights::SubstrateWeight<Runtime>`。
 
 ## 会话代付
 - `dispute/arbitrate` 已纳入 Forwarder 白名单命名空间（开发网示例）；可在 Authorizer 控制仲裁者白名单。
+ - 通过 `pallet-authorizer` 的域白名单控制允许发起/执行仲裁的账户集合。

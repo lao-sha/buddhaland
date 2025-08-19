@@ -1,4 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![recursion_limit = "256"]
 
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
@@ -23,6 +24,7 @@ pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 pub use pallet_forwarder::Call as ForwarderCall;
+pub use pallet_ritual::Call as RitualCall;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
@@ -266,4 +268,13 @@ mod runtime {
 
 	#[runtime::pallet_index(20)]
 	pub type Exchange = pallet_exchange;
+
+	#[runtime::pallet_index(21)]
+	pub type Ritual = pallet_ritual;
+
+	#[runtime::pallet_index(22)]
+	pub type Cemetery = pallet_cemetery;
+
+	#[runtime::pallet_index(23)]
+	pub type Deceased = pallet_deceased;
 }

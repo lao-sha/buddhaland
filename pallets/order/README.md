@@ -9,7 +9,7 @@
 2. `accept_order`：代办接单，绑定代办帐号（状态 `Assigned`）。
 3. `start_order`：代办开始执行（状态 `InProgress`）。
 4. `submit_order_proof`：代办提交图片/视频 CID（上限：20 图/5 视频），进入买家确认期（状态 `Submitted`）。
-5. `confirm_done_by_buyer`：买家确认完成，放款给代办并平台分账；随后按订单金额 1:1 调用 `pallet-karma` 为买家增发 Karma（状态 `Closed`）。
+5. `confirm_done_by_buyer`：买家确认完成，放款给代办并平台分账；随后按订单金额 1:1 通过本地适配器调用 Karma 模块为买家增发 Karma（状态 `Closed`）。
 6. `finalize_expired`：到期未争议自动放款（状态 `Closed`）。
 7. 仲裁：`arbitrate_release/refund/partial` 由仲裁路由触发（状态至 `Closed`）。
 
@@ -29,12 +29,14 @@
 - `finalize_expired(id)`：任何人触发超时自动放款。
 
 ### 事件说明
+- `OrderAccepted { id }`：代办接单。
+- `OrderStarted { id }`：代办开始执行。
 - `ProofSubmitted { id, img_count, vid_count }`：其中 `img_count/vid_count` 为本次提交的实际数量（非配置上限）。
 
 ## Config
 - `type Currency`、`type PalletIdGet`（订单子账户）、`type PlatformAccount`、`type PlatformFeeBps`。
 - `type Escrow`：托管接口实现。
-- `type Karma`：Karma 适配器（由 Runtime 绑定到 `pallet_karma::Pallet<Runtime>`），用于完成态 1:1 增发。
+- `type Karma`：本地适配 Trait（`KarmaMint`）。Runtime 通过适配器（示例：`KarmaMintAdapter`）桥接到 `pallet-karma` 的 `KarmaCurrency::gain`，用于完成态 1:1 增发。
 - `type WeightInfo`：基准权重类型。
 - 各项限值：`MaxCidLen`、`MaxImg`、`MaxVid`、`ConfirmTTL`。
 
@@ -43,3 +45,4 @@
 
 ## 代付白名单
 - 订单关键 Extrinsic 已纳入 Forwarder 命名空间（详见 runtime 配置）。
+- 注意：兑换 `pallet-exchange::exchange` 未纳入代付白名单，需用户自签自付（与订单无关）。

@@ -46,18 +46,6 @@ fn testnet_genesis(
 			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect::<Vec<_>>(),
 		},
 		sudo: SudoConfig { key: Some(root) },
-		authorizer: pallet_authorizer::GenesisConfig {
-			// 默认白名单：
-			// - Alice 加入仲裁/订单 域（会话代付示例）
-			// - Exchange 模块账户加入 Karma 域（允许为用户增发 Karma）
-			// - Alice 加入 Exchange 域（允许管理分配项）
-			whitelist: vec![
-				(crate::configs::ArbitrationNsBytes::get(), sp_keyring::Sr25519Keyring::Alice.to_account_id()),
-				(crate::configs::OrderNsBytes::get(), sp_keyring::Sr25519Keyring::Alice.to_account_id()),
-				(crate::configs::KarmaNsBytes::get(), crate::configs::ExchangePalletId::get().into_account_truncating()),
-				(crate::configs::ExchangeNsBytes::get(), sp_keyring::Sr25519Keyring::Alice.to_account_id()),
-			],
-		},
 	})
 }
 

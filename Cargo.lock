@@ -5921,6 +5921,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-cemetery"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-deceased"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-device"
 version = "0.1.0"
 dependencies = [
@@ -6060,6 +6083,18 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std 12.0.0",
+]
+
+[[package]]
+name = "pallet-ritual"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -9642,6 +9677,8 @@ dependencies = [
  "pallet-aura",
  "pallet-authorizer",
  "pallet-balances",
+ "pallet-cemetery",
+ "pallet-deceased",
  "pallet-device",
  "pallet-escrow",
  "pallet-exchange",
@@ -9652,6 +9689,7 @@ dependencies = [
  "pallet-mining",
  "pallet-order",
  "pallet-otc-market",
+ "pallet-ritual",
  "pallet-sudo",
  "pallet-template",
  "pallet-temple",
