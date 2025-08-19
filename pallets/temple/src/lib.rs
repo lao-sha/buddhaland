@@ -29,16 +29,12 @@ pub mod pallet {
         pub active: bool,
     }
 
-    /// 服务条目
+    /// 服务条目（仅目录/文案，不含定价）
     #[derive(Encode, Decode, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
-    #[scale_info(skip_type_params(MaxTiers))]
-    pub struct Service<Balance, MaxTiers: Get<u32>> {
+    pub struct Service {
         pub kind: ServiceKind,
         pub title_hash: H256,
         pub desc_hash: H256,
-        pub price_tiers: BoundedVec<Balance, MaxTiers>,
-        pub min_custom: Balance,
-        pub max_custom: Balance,
         pub active: bool,
     }
 
@@ -49,9 +45,8 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-        type MaxPriceTiers: Get<u32>;
         type MaxCalendar: Get<u32>;
-        /// 价格/金额所用的链上余额类型（与 runtime Balance 对齐）
+        /// 价格/金额类型保留对齐（本 pallet 不再直接持有价格字段）
         type Balance: Parameter + MaxEncodedLen + Default + Copy;
     }
 
@@ -66,7 +61,7 @@ pub mod pallet {
     #[pallet::storage]
     pub type Services<T: Config> = StorageDoubleMap<
         _, Blake2_128Concat, TempleId, Blake2_128Concat, ServiceId,
-        Service<BalanceOf<T>, T::MaxPriceTiers>, OptionQuery
+        Service, OptionQuery
     >;
     #[pallet::storage]
     pub type Calendars<T: Config> = StorageDoubleMap<
@@ -110,7 +105,7 @@ pub mod pallet {
         /// 添加服务（寺庙所有者）。为规避 Extrinsic 参数上的自定义枚举解码限制，这里使用 `kind_code: u8`，在内部映射到 `ServiceKind`。
         /// 价格分级与自定义金额使用运行时配置的 `Balance` 类型，避免跨类型转换。
         #[pallet::weight(10_000)]
-        pub fn add_service(origin: OriginFor<T>, temple: TempleId, kind_code: u8, title_hash: H256, desc_hash: H256, price_tiers: BoundedVec<BalanceOf<T>, T::MaxPriceTiers>, min_custom: BalanceOf<T>, max_custom: BalanceOf<T>) -> DispatchResult {
+        pub fn add_service(origin: OriginFor<T>, temple: TempleId, kind_code: u8, title_hash: H256, desc_hash: H256) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let tp = Temples::<T>::get(temple).ok_or(Error::<T>::TempleNotFound)?;
             ensure!(tp.owner == who, Error::<T>::NotOwner);
@@ -127,7 +122,7 @@ pub mod pallet {
                 8 => ServiceKind::Sutra,
                 _ => return Err(Error::<T>::InvalidKind.into()),
             };
-            Services::<T>::insert(temple, sid, Service { kind, title_hash, desc_hash, price_tiers, min_custom, max_custom, active: true });
+            Services::<T>::insert(temple, sid, Service { kind, title_hash, desc_hash, active: true });
             Self::deposit_event(Event::ServiceAdded { temple, service: sid });
             Ok(())
         }

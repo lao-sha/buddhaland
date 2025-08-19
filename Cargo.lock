@@ -5967,6 +5967,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-evidence"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-authorizer",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-exchange"
 version = "0.1.0"
 dependencies = [
@@ -9681,6 +9693,7 @@ dependencies = [
  "pallet-deceased",
  "pallet-device",
  "pallet-escrow",
+ "pallet-evidence",
  "pallet-exchange",
  "pallet-forwarder",
  "pallet-grandpa",

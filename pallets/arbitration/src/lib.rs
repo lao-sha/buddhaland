@@ -58,6 +58,15 @@ pub mod pallet {
         (), OptionQuery
     >;
 
+    /// 函数级中文注释：每个仲裁案件引用的 evidence_id 列表（证据本体由 pallet-evidence 存储）。
+    #[pallet::storage]
+    pub type EvidenceIds<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat, [u8; 8],
+        Blake2_128Concat, u64,
+        BoundedVec<u64, T::MaxEvidence>, ValueQuery
+    >;
+
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -104,6 +113,56 @@ pub mod pallet {
             T::Router::apply_decision(domain, id, decision.clone())?;
             let out = match decision { Decision::Release => (0, None), Decision::Refund => (1, None), Decision::Partial(p) => (2, Some(p)) };
             Self::deposit_event(Event::Arbitrated { domain, id, decision: out.0, bps: out.1 });
+            Ok(())
+        }
+
+        /// 函数级中文注释：以 evidence_id 的方式发起仲裁登记。
+        /// - 适用场景：前端/当事人先调用 `pallet-evidence::commit` 获得 `evidence_id`，再把该 id 带入此函数，
+        ///   从而实现“证据统一在 evidence 中存储与复用”，仲裁侧仅保存引用。
+        /// - 行为：
+        ///   1) 校验可发起（通过 Router.can_dispute）；2) 确保未被登记；3) 登记 Disputed；
+        ///   4) 将 evidence_id 追加到本案的证据引用列表；5) 触发 Disputed 事件。
+        #[pallet::call_index(2)]
+        #[pallet::weight(T::WeightInfo::dispute(1))]
+        pub fn dispute_with_evidence_id(
+            origin: OriginFor<T>,
+            domain: [u8; 8],
+            id: u64,
+            evidence_id: u64,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            #[cfg(not(feature = "runtime-benchmarks"))]
+            {
+                ensure!(T::Router::can_dispute(domain, &who, id), Error::<T>::NotDisputed);
+            }
+            ensure!(Disputed::<T>::get(domain, id).is_none(), Error::<T>::AlreadyDisputed);
+            Disputed::<T>::insert(domain, id, ());
+            EvidenceIds::<T>::try_mutate(domain, id, |v| {
+                v.try_push(evidence_id).map_err(|_| Error::<T>::AlreadyDisputed)?; // 复用错误占位，避免新增错误枚举
+                Ok(())
+            })?;
+            Self::deposit_event(Event::Disputed { domain, id });
+            Ok(())
+        }
+
+        /// 函数级中文注释：为已登记的仲裁案件追加一个 evidence_id 引用。
+        /// - 适用场景：补充证据；证据本体由 `pallet-evidence` 统一存储。
+        /// - 行为：
+        ///   1) 确认本案已登记；2) 追加 evidence_id 到引用列表。
+        #[pallet::call_index(3)]
+        #[pallet::weight(T::WeightInfo::dispute(1))]
+        pub fn append_evidence_id(
+            origin: OriginFor<T>,
+            domain: [u8; 8],
+            id: u64,
+            evidence_id: u64,
+        ) -> DispatchResult {
+            let _who = ensure_signed(origin)?;
+            ensure!(Disputed::<T>::get(domain, id).is_some(), Error::<T>::NotDisputed);
+            EvidenceIds::<T>::try_mutate(domain, id, |v| {
+                v.try_push(evidence_id).map_err(|_| Error::<T>::AlreadyDisputed)?;
+                Ok(())
+            })?;
             Ok(())
         }
     }

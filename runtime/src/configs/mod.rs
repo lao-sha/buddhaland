@@ -430,6 +430,27 @@ impl pallet_deceased::Config for Runtime {
     type MaxRelationsPerNode = DeceasedMaxRelations;
 }
 
+// ===== evidence 配置 =====
+parameter_types! {
+    pub const EvidenceMaxCidLen: u32 = 64;
+    pub const EvidenceMaxImg: u32 = 20;
+    pub const EvidenceMaxVid: u32 = 5;
+    pub const EvidenceMaxDoc: u32 = 5;
+    pub const EvidenceMaxMemoLen: u32 = 64;
+    pub const EvidenceNsBytes: [u8; 8] = *b"evid___ ";
+}
+impl pallet_evidence::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MaxCidLen = EvidenceMaxCidLen;
+    type MaxImg = EvidenceMaxImg;
+    type MaxVid = EvidenceMaxVid;
+    type MaxDoc = EvidenceMaxDoc;
+    type MaxMemoLen = EvidenceMaxMemoLen;
+    type EvidenceNsBytes = EvidenceNsBytes;
+    // 通过适配器接入授权中心，保持 Pallet 低耦合
+    type Authorizer = EvidenceAuthorizerAdapter;
+}
+
 parameter_types! {
     pub const OrderConfirmTTL: BlockNumber = 2 * DAYS; // 两天确认期
     pub const OrderMaxCidLen: u32 = 64;
@@ -449,8 +470,8 @@ impl pallet_order::Config for Runtime {
     type MaxVid = OrderMaxVid;
     type Escrow = pallet_escrow::Pallet<Runtime>;
     // 函数级中文注释：
-    // 通过本地适配 Trait（`KarmaMint`）为订单绑定 Karma 增发实现。
-    // 这里将其桥接到 `pallet_karma::Pallet<Runtime>` 的 `gain` 方法。
+    // 通过本地适配 Trait（`KarmaMint`）为订单绑定“功德值增加”实现。
+    // 这里将其桥接到 `pallet_karma::Pallet<Runtime>` 的 `add_merit` 方法。
     type Karma = KarmaMintAdapter;
     type WeightInfo = pallet_order::weights::SubstrateWeight<Runtime>;
 }
@@ -460,8 +481,8 @@ pub struct KarmaMintAdapter;
 impl pallet_order::pallet::KarmaMint<AccountId> for KarmaMintAdapter {
     type Balance = Balance;
     fn gain(origin_caller: &AccountId, who: &AccountId, amount: Self::Balance, memo: Vec<u8>) -> frame_support::dispatch::DispatchResult {
-        // 直接复用 Karma Pallet 的对外安全接口（含白名单校验与历史记录）
-        <pallet_karma::Pallet<Runtime> as pallet_karma::pallet::KarmaCurrency<AccountId>>::gain(origin_caller, who, amount, memo)
+        // 出于向后兼容保留，但内部切换为仅增加功德值
+        <pallet_karma::Pallet<Runtime> as pallet_karma::pallet::KarmaCurrency<AccountId>>::add_merit(origin_caller, who, amount, memo)
     }
 }
 
@@ -555,6 +576,16 @@ impl pallet_exchange::Config for Runtime {
     type Admin = ExchangeAdminAdapter;
     type Karma = pallet_karma::Pallet<Runtime>;
     type WeightInfo = (); // 基准后替换
+}
+
+// ===== evidence 授权适配器：桥接到 pallet-authorizer =====
+pub struct EvidenceAuthorizerAdapter;
+impl pallet_evidence::pallet::EvidenceAuthorizer<AccountId> for EvidenceAuthorizerAdapter {
+    /// 函数级中文注释：
+    /// is_authorized 调用授权中心 `pallet-authorizer`，判断给定账户在命名空间下是否被授权。
+    fn is_authorized(ns: [u8; 8], who: &AccountId) -> bool {
+        pallet_authorizer::Pallet::<Runtime>::is_authorized(pallet_authorizer::pallet::Namespace(ns), who)
+    }
 }
 
 // 为 Exchange 提供管理员校验适配：桥接到 pallet-authorizer

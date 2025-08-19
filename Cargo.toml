@@ -25,6 +25,7 @@ members = [
     "pallets/ritual",
     "pallets/cemetery",
     "pallets/deceased",
+    "pallets/evidence",
     "runtime",
 ]
 resolver = "2"

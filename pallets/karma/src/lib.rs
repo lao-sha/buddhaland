@@ -19,6 +19,8 @@ pub mod pallet {
 	pub enum KarmaEventType {
 		Gain,
 		Spend,
+		/// 新增：仅增加累计功德值（不变动 Karma 余额）
+		Merit,
 	}
 
 	/// 业力变动记录结构
@@ -102,6 +104,8 @@ pub mod pallet {
 			new_total_merit: T::KarmaBalance,
 			new_level: u32,
 		},
+		/// 新增事件：仅增加累计功德值（不变动 Karma 余额）
+		MeritAdded { account: T::AccountId, amount: T::KarmaBalance, new_total_merit: T::KarmaBalance, new_level: u32 },
 	}
 
 	#[pallet::error]
@@ -159,6 +163,12 @@ pub mod pallet {
 		fn gain(origin_caller: &AccountId, who: &AccountId, amount: Self::Balance, memo: Vec<u8>) -> DispatchResult;
 		/// 为账户消费 Karma（需授权且余额充足），并累计功德值与等级
 		fn spend(origin_caller: &AccountId, who: &AccountId, amount: Self::Balance, memo: Vec<u8>) -> DispatchResult;
+		/// 新增接口：仅增加累计功德值（不变动 Karma 余额），用于“完成订单即增加功德值”的业务场景
+		/// 函数级中文注释：
+		/// - 授权校验通过后，将 amount 累加到 TotalMeritOf，并按新累计值重算等级；
+		/// - 写入历史记录（event_type=Merit），触发 MeritAdded 事件；
+		/// - 不修改 KarmaOf 余额，不计入 TotalBurned。
+		fn add_merit(origin_caller: &AccountId, who: &AccountId, amount: Self::Balance, memo: Vec<u8>) -> DispatchResult;
 	}
 
 	impl<T: Config + pallet_authorizer::Config> KarmaCurrency<T::AccountId> for Pallet<T> {
@@ -233,6 +243,40 @@ pub mod pallet {
 				new_total_merit: total_merit,
 				new_level,
 			});
+			Ok(())
+		}
+
+		/// 仅增加累计功德值：白名单校验 -> 累计功德与等级 -> 写历史 -> 事件
+		/// 函数级中文注释：
+		/// - 用于“买家确认订单完成后按 1:1 增加总功德值”的场景；
+		/// - 不改变 Karma 余额，不影响 TotalBurned；
+		/// - 记录到历史并触发 MeritAdded 事件，便于前端与索引。
+		fn add_merit(
+			origin_caller: &T::AccountId,
+			who: &T::AccountId,
+			amount: Self::Balance,
+			memo: Vec<u8>,
+		) -> DispatchResult {
+			Self::ensure_authorized(origin_caller)?;
+			TotalMeritOf::<T>::mutate(who, |m| *m = (*m).saturating_add(amount));
+			let total_merit = TotalMeritOf::<T>::get(who);
+			let new_level = Self::recalc_level(total_merit);
+			LevelOf::<T>::insert(who, new_level);
+			let new_balance = KarmaOf::<T>::get(who);
+			let now: BlockNumberFor<T> = <frame_system::Pallet<T>>::block_number();
+			let memo_bounded: BoundedVec<u8, T::MaxMemoLen> = BoundedVec::try_from(memo)
+				.map_err(|_| Error::<T>::MemoTooLong)?;
+			let rec = KarmaRecord {
+				event_type: KarmaEventType::Merit,
+				amount,
+				total_karma_after: new_balance,
+				total_merit_after: total_merit,
+				level_after: new_level,
+				timestamp: now,
+				memo: memo_bounded,
+			};
+			Self::push_history(who, rec)?;
+			Self::deposit_event(Event::MeritAdded { account: who.clone(), amount, new_total_merit: total_merit, new_level });
 			Ok(())
 		}
 	}

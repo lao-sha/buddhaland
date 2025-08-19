@@ -41,6 +41,7 @@ pallet-exchange = { path = "../pallets/exchange", default-features = false }
 pallet-ritual = { path = "../pallets/ritual", default-features = false }
 pallet-cemetery = { path = "../pallets/cemetery", default-features = false }
 pallet-deceased = { path = "../pallets/deceased", default-features = false }
+pallet-evidence = { path = "../pallets/evidence", default-features = false }
 pallet-sudo.workspace = true
 pallet-template.workspace = true
 pallet-timestamp.workspace = true
@@ -97,6 +98,7 @@ std = [
 	"pallet-ritual/std",
 	"pallet-cemetery/std",
 	"pallet-deceased/std",
+	"pallet-evidence/std",
 	"pallet-sudo/std",
 	"pallet-template/std",
 	"pallet-timestamp/std",

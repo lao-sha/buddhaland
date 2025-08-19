@@ -49,6 +49,7 @@ pub mod pallet {
         pub temple_id: u32,
         pub service_id: u32,
         pub qty: u32,
+        // 取消下单即锁定金额，由后续基于 agent 报价进行托管
         pub locked: Balance,
         pub status: OrderStatus,
         pub decision_deadline: Option<BlockNumber>,
@@ -231,12 +232,10 @@ pub mod pallet {
         /// 创建订单（最小骨架：仅示例必要字段）
         #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::create_order())]
-        pub fn create_order(origin: OriginFor<T>, temple_id: u32, service_id: u32, qty: u32, locked: BalanceOf<T>) -> DispatchResult {
+        pub fn create_order(origin: OriginFor<T>, temple_id: u32, service_id: u32, qty: u32) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let id = NextOrderId::<T>::mutate(|x| { let id=*x; *x=id.saturating_add(1); id });
-            Orders::<T>::insert(id, Order { buyer: who, agent: None, temple_id, service_id, qty, locked, status: OrderStatus::Created, decision_deadline: None });
-            // 调用托管接口：从买家转入托管账户并记录
-            <T::Escrow as EscrowTrait<T::AccountId, BalanceOf<T>>>::lock_from(&Orders::<T>::get(id).unwrap().buyer, id, locked)?;
+            Orders::<T>::insert(id, Order { buyer: who, agent: None, temple_id, service_id, qty, locked: Default::default(), status: OrderStatus::Created, decision_deadline: None });
             Self::deposit_event(Event::OrderCreated { id });
             Ok(())
         }
@@ -276,8 +275,8 @@ pub mod pallet {
         /// 函数级详细中文注释：
         /// - 前置条件：仅订单买家可调用，且订单状态必须为 `Submitted`（代办已提交凭证，处于确认期）。
         /// - 资金流程：调用托管模块按平台费比例分账，净额打给代办（寺庙不收款）。
-        /// - 奖励流程：放款成功后，按订单托管金额 1:1 为买家增发 Karma。
-        ///   - 调用方式：以 `PlatformAccount` 作为“授权调用者”调用 `T::Karma::gain`；
+        /// - 奖励流程：放款成功后，按订单托管金额 1:1 为买家“增加总功德值”（不增加 Karma 余额）。
+        ///   - 调用方式：以 `PlatformAccount` 作为“授权调用者”调用 `T::Karma::add_merit`；
         ///   - 授权与失败：需预先在 `pallet-authorizer` 为 `Karma` 的命名空间授权该调用者；
         ///     若未授权或备注过长导致失败，整个交易回滚，确保原子性与一致性。
         #[pallet::call_index(2)]
@@ -292,14 +291,15 @@ pub mod pallet {
             order.status = OrderStatus::Released;
             Orders::<T>::insert(id, &order);
             Self::payout_to_agent(id, &agent, amount)?;
-            // 为买家增发与订单金额等额的 Karma（1:1）。
+            // 为买家增加与订单金额等额的“总功德值”（1:1）。
             // 以平台账户作为授权调用者，备注包含订单标识，便于链下审计。
             {
                 use alloc::vec::Vec;
                 let caller = T::PlatformAccount::get();
                 let mut memo: Vec<u8> = b"order:".to_vec();
                 memo.extend_from_slice(&id.to_le_bytes());
-                <T as Config>::Karma::gain(&caller, &buyer, amount, memo)?;
+                // 调整为仅增加总功德值接口
+                <T as Config>::Karma::add_merit(&caller, &buyer, amount, memo)?;
             }
             order.status = OrderStatus::Closed;
             Orders::<T>::insert(id, order);

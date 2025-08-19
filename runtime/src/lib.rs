@@ -277,4 +277,7 @@ mod runtime {
 
 	#[runtime::pallet_index(23)]
 	pub type Deceased = pallet_deceased;
+
+	#[runtime::pallet_index(24)]
+	pub type Evidence = pallet_evidence;
 }
