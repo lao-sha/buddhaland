@@ -298,8 +298,8 @@ pub mod pallet {
                 let caller = T::PlatformAccount::get();
                 let mut memo: Vec<u8> = b"order:".to_vec();
                 memo.extend_from_slice(&id.to_le_bytes());
-                // 调整为仅增加总功德值接口
-                <T as Config>::Karma::add_merit(&caller, &buyer, amount, memo)?;
+                // 调整为仅增加总功德值接口（通过本地适配器的 gain 方法桥接到 pallet-karma::add_merit）
+                <T as Config>::Karma::gain(&caller, &buyer, amount, memo)?;
             }
             order.status = OrderStatus::Closed;
             Orders::<T>::insert(id, order);

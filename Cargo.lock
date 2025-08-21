@@ -5944,18 +5944,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-device"
-version = "0.1.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-runtime",
-]
-
-[[package]]
 name = "pallet-escrow"
 version = "0.1.0"
 dependencies = [
@@ -6036,34 +6024,6 @@ dependencies = [
  "pallet-authorizer",
  "parity-scale-codec",
  "scale-info",
- "sp-runtime",
-]
-
-[[package]]
-name = "pallet-meditation"
-version = "0.1.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-authorizer",
- "pallet-device",
- "pallet-mining",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-runtime",
-]
-
-[[package]]
-name = "pallet-mining"
-version = "0.1.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-authorizer",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
  "sp-runtime",
 ]
 
@@ -6158,18 +6118,6 @@ dependencies = [
  "scale-info",
  "sp-core",
  "sp-io",
- "sp-runtime",
-]
-
-[[package]]
-name = "pallet-temple"
-version = "0.1.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
  "sp-runtime",
 ]
 
@@ -9691,21 +9639,17 @@ dependencies = [
  "pallet-balances",
  "pallet-cemetery",
  "pallet-deceased",
- "pallet-device",
  "pallet-escrow",
  "pallet-evidence",
  "pallet-exchange",
  "pallet-forwarder",
  "pallet-grandpa",
  "pallet-karma",
- "pallet-meditation",
- "pallet-mining",
  "pallet-order",
  "pallet-otc-market",
  "pallet-ritual",
  "pallet-sudo",
  "pallet-template",
- "pallet-temple",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",

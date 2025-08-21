@@ -42,9 +42,7 @@ use sp_version::RuntimeVersion;
 // 引入以区块数表示的一天常量，用于配置授权中心的投票期（AuthorizerVotingPeriod）
 use crate::DAYS;
 // 引入以区块数表示的一分钟常量，用于设备挑战 TTL 等时间参数
-use crate::MINUTES;
-// 引入余额单位常量
-use crate::MILLI_UNIT;
+// 引入余额单位常量（已移除与设备/挖矿相关依赖，无需引入 MINUTES/MILLI_UNIT）
 
 // Local module imports
 use super::{
@@ -67,8 +65,6 @@ impl ForwarderAuthorizer<AccountId, RuntimeCall> for AuthorizerAdapter {
 	/// 校验调用是否在允许范围（基于命名空间 + 具体 Call 变体匹配）
 	fn is_call_allowed(ns: [u8; 8], _sponsor: &AccountId, call: &RuntimeCall) -> bool {
 		let order_ns = OrderNsBytes::get();
-		let device_ns = DeviceNsBytes::get();
-		let meditation_ns = MeditationNsBytes::get();
 		match (ns, call) {
 			// 订单域：仅允许下单与履约关键路径
 			(n, RuntimeCall::Order(inner)) if n == order_ns => matches!(
@@ -78,16 +74,7 @@ impl ForwarderAuthorizer<AccountId, RuntimeCall> for AuthorizerAdapter {
 				| pallet_order::Call::confirm_done_by_buyer { .. }
 				| pallet_order::Call::finalize_expired { .. }
 			),
-			// 设备域：绑定相关
-			(n, RuntimeCall::Device(inner)) if n == device_ns => matches!(
-				inner,
-				pallet_device::Call::open_bind_challenge { .. } | pallet_device::Call::bind_headband { .. }
-			),
-			// 冥想域：仅提交会话摘要
-			(n, RuntimeCall::Meditation(inner)) if n == meditation_ns => matches!(
-				inner,
-				pallet_meditation::Call::submit_session { .. }
-			),
+			// 设备/冥想相关调用已移除
 			// 仲裁域：允许提交争议与裁决（可叠加白名单控制仲裁者）
 			(n, RuntimeCall::Arbitration(inner)) if n == ArbitrationNsBytes::get() => matches!(
 				inner,
@@ -272,97 +259,16 @@ impl pallet_forwarder::Config for Runtime {
 	type MaxPermitLen = frame_support::traits::ConstU32<512>;
 }
 
-// ===== pallet-device 配置 =====
-parameter_types! {
-    pub const MaxDevicesPerOwner: u32 = 8;
-    pub const ChallengeTtl: BlockNumber = 10 * MINUTES; // 约 10 分钟
-    pub const MinRegisterDeposit: Balance = 0;
-    pub const DeviceMaxMetaLen: u32 = 256;
-}
+// 设备/挖矿/冥想相关配置已移除
 
-impl pallet_device::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
-    type Currency = Balances;
-    type MaxDevicesPerOwner = MaxDevicesPerOwner;
-    type ChallengeTtl = ChallengeTtl;
-    type MinRegisterDeposit = MinRegisterDeposit;
-    type MaxMetaLen = DeviceMaxMetaLen;
-}
-
-// ===== pallet-mining 配置 =====
-parameter_types! {
-    pub const MiningMaxSessionMinutes: u16 = 180; // 单会话最多计 3h
-    pub const MiningBasePerMinute: Balance = 1 * MILLI_UNIT; // 每分钟 0.001 BUD（示例）
-    pub const MiningDailyCapPerDevice: Balance = 200 * MILLI_UNIT;
-    pub const MiningDailyCapPerAccount: Balance = 500 * MILLI_UNIT;
-    pub const MiningDailyCapGlobal: Balance = 100_000 * MILLI_UNIT;
-}
-
-// 冥想挖矿在授权中心的命名空间
-parameter_types! {
-    pub const MiningNsBytes: [u8; 8] = *b"mining__";
-}
-
-// 为 mining 提供授权适配器：桥接到 pallet-authorizer
-pub struct MiningAuthorizerAdapter;
-impl pallet_mining::pallet::MiningAuthorizer<AccountId> for MiningAuthorizerAdapter {
-    fn is_authorized(caller: &AccountId) -> bool {
-        let ns = MiningNsBytes::get();
-        pallet_authorizer::Pallet::<Runtime>::is_authorized(pallet_authorizer::pallet::Namespace(ns), caller)
-    }
-}
-
-impl pallet_mining::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type Currency = Balances;
-    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
-    type Authorizer = MiningAuthorizerAdapter;
-    type MaxSessionMinutes = MiningMaxSessionMinutes;
-    type DailyCapPerDevice = MiningDailyCapPerDevice;
-    type DailyCapPerAccount = MiningDailyCapPerAccount;
-    type DailyCapGlobal = MiningDailyCapGlobal;
-    type BaseBudPerMinute = MiningBasePerMinute;
-}
-
-// ===== pallet-meditation 配置 =====
-parameter_types! {
-    pub const MeditationMaxOffchainLen: u32 = 96;
-    pub const MeditationRequireHeadband: bool = true;
-    pub const MeditationRequireBinding: bool = true;
-    pub const MeditationRequireDeviceSig: bool = false; // MVP 暂不检验
-}
-
+// （pallet-meditation 已移除）
 // ===== 会话许可命名空间常量（用于 forwarder + authorizer） =====
 parameter_types! {
     pub const OrderNsBytes: [u8; 8] = *b"order___";
-    pub const DeviceNsBytes: [u8; 8] = *b"device__";
-    pub const MeditationNsBytes: [u8; 8] = *b"meditate"; // 8字节
     pub const ArbitrationNsBytes: [u8; 8] = *b"arb___ _"; // 8字节
 }
 
-impl pallet_meditation::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
-    type MaxOffchainLen = MeditationMaxOffchainLen;
-    type RequireHeadband = MeditationRequireHeadband;
-    type RequireBinding = MeditationRequireBinding;
-    type RequireDeviceSignature = MeditationRequireDeviceSig;
-    type MaxHeaderLen = frame_support::traits::ConstU32<512>;
-}
-
-// ===== temple/agent/order 配置（MVP：仅最小实现所需） =====
-parameter_types! {
-    pub const MaxPriceTiers: u32 = 8;
-    pub const MaxCalendarSlots: u32 = 64;
-}
-impl pallet_temple::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type MaxPriceTiers = MaxPriceTiers;
-    type MaxCalendar = MaxCalendarSlots;
-    // 价格/金额统一使用链上 Balance 类型
-    type Balance = Balance;
-}
+// ===== temple 已移除；保留 agent/order 配置 =====
 
 parameter_types! {
     pub const AgentMaxSkills: u32 = 16;

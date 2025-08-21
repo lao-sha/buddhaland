@@ -12,7 +12,7 @@
   - extra_note: Option<BoundedVec<u8, T::MaxOrderNoteLen>> - 额外说明
 - 权限：任何已签名用户
 - 状态变更：创建订单，状态为 Created
-- 返回事件：OrderCreated { order_id, buyer, agent, temple, service_index, amount }
+- 返回事件：OrderCreated { order_id, buyer, agent, service_index, amount }
 
 ### 1.2 accept_order - 接受订单
 - 功能：代办人接受订单
@@ -55,7 +55,8 @@
 - 状态变更：订单状态从 Submitted → Released → Closed
 - 返回事件：OrderReleasedAndClosed { order_id }
 
-## 2. 寺庙管理 (pallet-temple)
+<!-- 已移除：pallet-temple -->
+## 2.（已移除）
 
 ### 2.1 register_temple - 注册寺庙
 - 功能：注册新的寺庙
@@ -174,7 +175,8 @@
 - 权限：任何已签名用户
 - 返回事件：TributeOffered { spec_id, offerer, tribute_id }
 
-## 7. 设备管理 (pallet-device)
+<!-- 已移除：pallet-device -->
+## 7.（已移除）
 
 ### 7.1 register_headband - 注册设备
 - 功能：注册冥想头带设备
@@ -280,27 +282,15 @@
 - 权限：会话发起者
 - 返回事件：CallForwarded { session_id }
 
-## 11. 冥想记录 (pallet-meditation)
+<!-- 已移除：pallet-meditation -->
+## 11.（已移除）
 
-### 11.1 submit_session - 提交冥想会话
-- 功能：提交冥想会话摘要
-- 调用参数：
-  - device_id: BoundedVec<u8, <T as pallet_device::Config>::MaxDeviceIdLen> - 设备ID
-  - session_summary: SessionSummary - 会话摘要
-  - device_signature: sp_core::sr25519::Signature - 设备签名
-- 权限：任何已签名用户（需设备验证）
-- 副作用：触发挖矿奖励
-- 返回事件：SessionSubmitted { user, session_id }
+<!-- 11.x 条目已移除 -->
 
-## 12. 挖矿奖励 (pallet-mining)
+<!-- 已移除：pallet-mining -->
+## 12.（已移除）
 
-### 12.1 mine - 挖矿记账
-- 功能：记录挖矿行为并发放奖励
-- 调用参数：
-  - miner: T::AccountId - 矿工账户
-  - amount: BalanceOf<T> - 奖励金额
-- 权限：授权的挖矿接口（通常由其他 pallet 调用）
-- 返回事件：Mined { miner, amount }
+<!-- 12.x 条目已移除 -->
 
 ## 13. OTC 市场 (pallet-otc-market)
 
@@ -509,9 +499,7 @@
 await api.tx.order.createOrder(serviceIndex, amount, extraNote)
   .signAndSend(account, callback);
 
-// 2. 注册寺庙
-await api.tx.temple.registerTemple(templeName, location, description)
-  .signAndSend(account, callback);
+// temple 已移除，无对应调用
 
 // 3. 提交订单证据
 await api.tx.order.submitOrderProof(orderId, imgCids, vidCids, noteHash)

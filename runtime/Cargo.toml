@@ -28,10 +28,6 @@ pallet-grandpa.workspace = true
 pallet-karma = { path = "../pallets/karma", default-features = false }
 pallet-authorizer = { path = "../pallets/authorizer", default-features = false }
 pallet-forwarder = { path = "../pallets/forwarder", default-features = false }
-pallet-device = { path = "../pallets/device", default-features = false }
-pallet-mining = { path = "../pallets/mining", default-features = false }
-pallet-meditation = { path = "../pallets/meditation", default-features = false }
-pallet-temple = { path = "../pallets/temple", default-features = false }
 pallet-agent = { path = "../pallets/agent", default-features = false }
 pallet-order = { path = "../pallets/order", default-features = false }
 pallet-otc-market = { path = "../pallets/otc-market", default-features = false }
@@ -85,10 +81,6 @@ std = [
 	"pallet-karma/std",
 	"pallet-authorizer/std",
 	"pallet-forwarder/std",
-	"pallet-device/std",
-	"pallet-mining/std",
-	"pallet-meditation/std",
-	"pallet-temple/std",
 	"pallet-agent/std",
 	"pallet-order/std",
 	"pallet-otc-market/std",

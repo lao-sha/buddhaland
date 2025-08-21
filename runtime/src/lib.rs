@@ -240,44 +240,32 @@ mod runtime {
 	pub type Forwarder = pallet_forwarder;
 
 	#[runtime::pallet_index(11)]
-	pub type Device = pallet_device;
-
-	#[runtime::pallet_index(12)]
-	pub type Mining = pallet_mining;
-
-	#[runtime::pallet_index(13)]
-	pub type Meditation = pallet_meditation;
-
-	#[runtime::pallet_index(14)]
-	pub type Temple = pallet_temple;
-
-	#[runtime::pallet_index(15)]
 	pub type Agent = pallet_agent;
 
-	#[runtime::pallet_index(16)]
+	#[runtime::pallet_index(12)]
 	pub type Order = pallet_order;
 
-	#[runtime::pallet_index(17)]
+	#[runtime::pallet_index(13)]
 	pub type OtcMarket = pallet_otc_market;
 
-	#[runtime::pallet_index(18)]
+	#[runtime::pallet_index(14)]
 	pub type Escrow = pallet_escrow;
 
-	#[runtime::pallet_index(19)]
+	#[runtime::pallet_index(15)]
 	pub type Arbitration = pallet_arbitration;
 
-	#[runtime::pallet_index(20)]
+	#[runtime::pallet_index(16)]
 	pub type Exchange = pallet_exchange;
 
-	#[runtime::pallet_index(21)]
+	#[runtime::pallet_index(17)]
 	pub type Ritual = pallet_ritual;
 
-	#[runtime::pallet_index(22)]
+	#[runtime::pallet_index(18)]
 	pub type Cemetery = pallet_cemetery;
 
-	#[runtime::pallet_index(23)]
+	#[runtime::pallet_index(19)]
 	pub type Deceased = pallet_deceased;
 
-	#[runtime::pallet_index(24)]
+	#[runtime::pallet_index(20)]
 	pub type Evidence = pallet_evidence;
 }
